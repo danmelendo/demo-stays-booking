@@ -28,25 +28,25 @@ import extraDecoration from "@/assets/extra-decoration.jpg";
 // Map to dynamically resolve room images from /public/imagenes
 const ROOM_IMAGES_MAP: Record<string, Record<string, string>> = {
   central: {
-    "Grey": "/imagenes/rooms/central-grey.svg",
-    "Ocean": "/imagenes/rooms/central-ocean.svg",
-    "Paris": "/imagenes/rooms/central-paris.svg",
-    "Safari": "/imagenes/rooms/central-safari.svg",
-    "Tokyo": "/imagenes/rooms/central-tokyo.svg",
+    "Aurora": "/imagenes/rooms/central-aurora.svg",
+    "Coral": "/imagenes/rooms/central-coral.svg",
+    "Jade": "/imagenes/rooms/central-jade.svg",
+    "Ambar": "/imagenes/rooms/central-ambar.svg",
+    "Zen": "/imagenes/rooms/central-zen.svg",
   },
   norte: {
-    "Empire State": "/imagenes/rooms/norte-empire-state.svg",
-    "Grey": "/imagenes/rooms/norte-grey.svg",
-    "Hollywood": "/imagenes/rooms/norte-hollywood.svg",
-    "Music": "/imagenes/rooms/norte-music.svg",
-    "Route 66": "/imagenes/rooms/norte-route-66.svg",
+    "Skyline": "/imagenes/rooms/norte-skyline.svg",
+    "Pizarra": "/imagenes/rooms/norte-pizarra.svg",
+    "Estelar": "/imagenes/rooms/norte-estelar.svg",
+    "Ritmo": "/imagenes/rooms/norte-ritmo.svg",
+    "Nomada": "/imagenes/rooms/norte-nomada.svg",
   },
   sur: {
-    "Dubai": "/imagenes/rooms/sur-dubai.svg",
-    "Grey": "/imagenes/rooms/sur-grey.svg",
-    "Maldivas": "/imagenes/rooms/sur-maldivas.svg",
-    "New York": "/imagenes/rooms/sur-new-york.svg",
-    "Tu y yo": "/imagenes/rooms/sur-tu-y-yo.svg",
+    "Oasis": "/imagenes/rooms/sur-oasis.svg",
+    "Onyx": "/imagenes/rooms/sur-onyx.svg",
+    "Laguna": "/imagenes/rooms/sur-laguna.svg",
+    "Metropolis": "/imagenes/rooms/sur-metropolis.svg",
+    "Eden": "/imagenes/rooms/sur-eden.svg",
   },
 };
 
@@ -133,7 +133,7 @@ function decorationNeedsMessage(ex: ExtraLite) {
 // the gateway minimum (0.01 €), letting us test the real TPV with a tiny charge.
 // NOTE: validated client-side only — it is visible in the JS bundle and amounts
 // are not enforced server-side. Remove/disable before opening real sales.
-const DEBUG_DISCOUNT_CODE = "RMDEBUG999";
+const DEBUG_DISCOUNT_CODE = "DEMODEBUG999";
 const DEBUG_DISCOUNT_PCT = 0.999;
 const REDSYS_MIN_EUR = 0.01;
 
@@ -212,7 +212,7 @@ const CONTACTS: Record<string, { phones: { number: string; href: string }[]; ema
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=DM+Sans:wght@300;400;500&display=swap');
 
-  .rm-page {
+  .ds-page {
     --gold: #b8975a;
     --gold-light: #d4b483;
     --gold-dark: #8a6e3e;
@@ -221,7 +221,7 @@ const CSS = `
     --ink-soft: #7a6e62;
     --cream: #faf7f2;
     --cream-dark: #f0ead8;
-    --warm-white: #fffdf9;
+    --wads-white: #fffdf9;
     --border: rgba(184,151,90,0.25);
     --border-strong: rgba(184,151,90,0.5);
     font-family: 'DM Sans', sans-serif;
@@ -230,40 +230,40 @@ const CSS = `
     min-height: 100svh;
   }
 
-  .rm-page * { box-sizing: border-box; }
-  .rm-page *:where(:not(input):not(button):not(select):not(textarea)) { margin: 0; padding: 0; }
+  .ds-page * { box-sizing: border-box; }
+  .ds-page *:where(:not(input):not(button):not(select):not(textarea)) { margin: 0; padding: 0; }
 
-  .rm-serif { font-family: 'Cormorant Garamond', Georgia, serif; }
+  .ds-serif { font-family: 'Cormorant Garamond', Georgia, serif; }
 
   /* Header */
-  .rm-header {
+  .ds-header {
     position: sticky; top: 0; z-index: 50;
     background: var(--ink);
     border-bottom: 1px solid var(--gold-dark);
   }
-  .rm-header-inner {
+  .ds-header-inner {
     max-width: 1100px; margin: 0 auto;
     padding: 0 24px;
     height: 64px;
     display: flex; align-items: center; gap: 20px;
   }
-  .rm-logo {
+  .ds-logo {
     font-family: 'Cormorant Garamond', serif;
     font-size: 22px; font-weight: 600; letter-spacing: 0.08em;
     color: var(--gold);
     text-transform: uppercase;
     white-space: nowrap;
   }
-  .rm-logo span { color: #fff; }
-  .rm-help {
+  .ds-logo span { color: #fff; }
+  .ds-help {
     margin-left: auto;
     display: flex; align-items: center; gap: 8px;
     color: rgba(255,255,255,0.6); font-size: 13px;
   }
-  .rm-help a { color: var(--gold-light); text-decoration: none; font-weight: 500; }
+  .ds-help a { color: var(--gold-light); text-decoration: none; font-weight: 500; }
 
   /* Age banner */
-  .rm-age-banner {
+  .ds-age-banner {
     background: var(--gold);
     text-align: center;
     padding: 7px 16px;
@@ -273,61 +273,61 @@ const CSS = `
   }
 
   /* Step indicator */
-  .rm-steps {
-    background: var(--warm-white);
+  .ds-steps {
+    background: var(--wads-white);
     border-bottom: 1px solid var(--border);
   }
-  .rm-steps-inner {
+  .ds-steps-inner {
     max-width: 1100px; margin: 0 auto;
     padding: 0 24px;
     display: flex; align-items: center;
     height: 52px; gap: 0;
   }
-  .rm-step {
+  .ds-step {
     display: flex; align-items: center; gap: 10px;
     padding: 0 4px;
     font-size: 13px;
     color: var(--ink-soft);
     flex-shrink: 0;
   }
-  .rm-step-num {
+  .ds-step-num {
     width: 24px; height: 24px; border-radius: 50%;
     border: 1.5px solid currentColor;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 500;
     flex-shrink: 0;
   }
-  .rm-step.active { color: var(--gold-dark); font-weight: 500; }
-  .rm-step.active .rm-step-num { background: var(--gold); border-color: var(--gold); color: #fff; }
-  .rm-step.done { color: var(--ink-mid); }
-  .rm-step.done .rm-step-num { background: var(--ink-mid); border-color: var(--ink-mid); color: #fff; }
-  .rm-step-sep { flex: 1; height: 1px; background: var(--border); min-width: 12px; max-width: 60px; }
+  .ds-step.active { color: var(--gold-dark); font-weight: 500; }
+  .ds-step.active .ds-step-num { background: var(--gold); border-color: var(--gold); color: #fff; }
+  .ds-step.done { color: var(--ink-mid); }
+  .ds-step.done .ds-step-num { background: var(--ink-mid); border-color: var(--ink-mid); color: #fff; }
+  .ds-step-sep { flex: 1; height: 1px; background: var(--border); min-width: 12px; max-width: 60px; }
 
   /* Main layout */
-  .rm-main {
+  .ds-main {
     max-width: 1100px; margin: 0 auto;
     padding: 40px 24px 80px;
   }
 
   /* ── SEARCH STEP ── */
-  .rm-hero { text-align: center; margin-bottom: 48px; }
-  .rm-hero-eyebrow {
+  .ds-hero { text-align: center; margin-bottom: 48px; }
+  .ds-hero-eyebrow {
     font-size: 12px; letter-spacing: 0.18em; text-transform: uppercase;
     color: var(--gold); font-weight: 500; margin-bottom: 12px;
     display: flex; align-items: center; justify-content: center; gap: 8px;
   }
-  .rm-hero h1 {
+  .ds-hero h1 {
     font-family: 'Cormorant Garamond', serif;
     font-size: clamp(38px, 7vw, 68px);
     font-weight: 500; line-height: 1.08;
     color: var(--ink);
     margin-bottom: 16px;
   }
-  .rm-hero h1 em { font-style: italic; color: var(--gold-dark); }
-  .rm-hero p { font-size: 16px; color: var(--ink-soft); max-width: 480px; margin: 0 auto; line-height: 1.65; }
+  .ds-hero h1 em { font-style: italic; color: var(--gold-dark); }
+  .ds-hero p { font-size: 16px; color: var(--ink-soft); max-width: 480px; margin: 0 auto; line-height: 1.65; }
 
-  .rm-search-card {
-    background: var(--warm-white);
+  .ds-search-card {
+    background: var(--wads-white);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 32px;
@@ -335,24 +335,24 @@ const CSS = `
     box-shadow: 0 4px 40px rgba(26,20,16,0.06);
   }
   @media (max-width: 600px) {
-    .rm-search-card { padding: 20px 16px; border-radius: 12px; }
-    .rm-card { padding: 20px 16px; }
+    .ds-search-card { padding: 20px 16px; border-radius: 12px; }
+    .ds-card { padding: 20px 16px; }
   }
-  .rm-search-grid {
+  .ds-search-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 20px;
   }
   @media (max-width: 600px) {
-    .rm-search-grid { grid-template-columns: 1fr; }
+    .ds-search-grid { grid-template-columns: 1fr; }
   }
-  .rm-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-  .rm-label {
+  .ds-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+  .ds-label {
     font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
     font-weight: 500; color: var(--ink-soft);
   }
 
-  .rm-overnight-row {
+  .ds-overnight-row {
     grid-column: 1 / -1;
     display: flex; align-items: center; justify-content: space-between;
     background: var(--cream);
@@ -360,10 +360,10 @@ const CSS = `
     border-radius: 10px;
     padding: 14px 18px;
   }
-  .rm-overnight-row-label { font-size: 14px; font-weight: 500; color: var(--ink); }
-  .rm-overnight-row-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
+  .ds-overnight-row-label { font-size: 14px; font-weight: 500; color: var(--ink); }
+  .ds-overnight-row-sub { font-size: 12px; color: var(--ink-soft); margin-top: 2px; }
 
-  .rm-btn-primary {
+  .ds-btn-primary {
     grid-column: 1 / -1;
     background: var(--ink);
     color: var(--gold-light);
@@ -376,81 +376,81 @@ const CSS = `
     display: flex; align-items: center; justify-content: center; gap: 8px;
     font-family: 'DM Sans', sans-serif;
   }
-  .rm-btn-primary:hover { background: var(--gold-dark); color: #fff; }
+  .ds-btn-primary:hover { background: var(--gold-dark); color: #fff; }
 
-  .rm-trust {
+  .ds-trust {
     display: grid; grid-template-columns: repeat(3, 1fr);
     gap: 12px; max-width: 720px; margin: 0 auto;
   }
-  @media (max-width: 520px) { .rm-trust { grid-template-columns: 1fr; } }
-  .rm-trust-item {
-    background: var(--warm-white);
+  @media (max-width: 520px) { .ds-trust { grid-template-columns: 1fr; } }
+  .ds-trust-item {
+    background: var(--wads-white);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 20px;
     text-align: center;
   }
-  .rm-trust-icon { font-size: 22px; margin-bottom: 8px; }
-  .rm-trust-title { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
-  .rm-trust-sub { font-size: 12px; color: var(--ink-soft); }
+  .ds-trust-icon { font-size: 22px; margin-bottom: 8px; }
+  .ds-trust-title { font-size: 14px; font-weight: 500; color: var(--ink); margin-bottom: 4px; }
+  .ds-trust-sub { font-size: 12px; color: var(--ink-soft); }
 
   /* ── ROOMS STEP ── */
-  .rm-section-header { margin-bottom: 28px; }
-  .rm-section-header h2 {
+  .ds-section-header { margin-bottom: 28px; }
+  .ds-section-header h2 {
     font-family: 'Cormorant Garamond', serif;
     font-size: 36px; font-weight: 500; color: var(--ink);
     margin-bottom: 6px;
   }
-  .rm-section-header p { font-size: 14px; color: var(--ink-soft); }
+  .ds-section-header p { font-size: 14px; color: var(--ink-soft); }
 
-  .rm-rooms-list { display: flex; flex-direction: column; gap: 0; }
+  .ds-rooms-list { display: flex; flex-direction: column; gap: 0; }
 
-  .rm-room-card {
-    background: var(--warm-white);
+  .ds-room-card {
+    background: var(--wads-white);
     border: 1px solid var(--border);
     border-radius: 16px;
     overflow: hidden;
     transition: border-color 0.2s, box-shadow 0.2s;
     margin-bottom: 20px;
   }
-  .rm-room-card:hover { border-color: var(--border-strong); box-shadow: 0 8px 40px rgba(26,20,16,0.09); }
+  .ds-room-card:hover { border-color: var(--border-strong); box-shadow: 0 8px 40px rgba(26,20,16,0.09); }
 
-  .rm-room-top {
+  .ds-room-top {
     display: grid;
     grid-template-columns: 300px 1fr auto;
   }
   @media (max-width: 680px) {
-    .rm-room-top { grid-template-columns: 1fr; }
+    .ds-room-top { grid-template-columns: 1fr; }
   }
 
-  .rm-room-img {
+  .ds-room-img {
     aspect-ratio: 4/3;
     object-fit: cover;
     width: 100%; height: 100%;
     display: block;
   }
-  @media (max-width: 680px) { .rm-room-img { max-height: 220px; } }
+  @media (max-width: 680px) { .ds-room-img { max-height: 220px; } }
 
-  .rm-room-info { padding: 24px; }
-  .rm-room-building {
+  .ds-room-info { padding: 24px; }
+  .ds-room-building {
     font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
     color: var(--gold); font-weight: 500; margin-bottom: 6px;
   }
-  .rm-room-name {
+  .ds-room-name {
     font-family: 'Cormorant Garamond', serif;
     font-size: 26px; font-weight: 500; color: var(--ink);
     margin-bottom: 12px; line-height: 1.1;
   }
-  .rm-room-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .rm-badge {
+  .ds-room-badges { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
+  .ds-badge {
     display: inline-flex; align-items: center; gap: 5px;
     background: var(--cream); border: 1px solid var(--border);
     border-radius: 20px; padding: 4px 10px;
     font-size: 12px; color: var(--ink-mid);
   }
-  .rm-room-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
+  .ds-room-desc { font-size: 13px; color: var(--ink-soft); line-height: 1.6; }
 
-  .rm-room-cta {
+  .ds-room-cta {
     padding: 24px;
     border-left: 1px solid var(--border);
     display: flex; flex-direction: column;
@@ -458,19 +458,19 @@ const CSS = `
     gap: 16px; min-width: 160px;
   }
   @media (max-width: 680px) {
-    .rm-room-cta {
+    .ds-room-cta {
       border-left: none; border-top: 1px solid var(--border);
       flex-direction: row; align-items: center;
       padding: 16px 24px;
     }
   }
-  .rm-price-from { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
-  .rm-price-amount {
+  .ds-price-from { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-soft); }
+  .ds-price-amount {
     font-family: 'Cormorant Garamond', serif;
     font-size: 34px; font-weight: 500; color: var(--ink);
     line-height: 1;
   }
-  .rm-btn-select {
+  .ds-btn-select {
     background: var(--gold);
     color: var(--ink);
     border: none; border-radius: 8px;
@@ -482,14 +482,14 @@ const CSS = `
     font-family: 'DM Sans', sans-serif;
     white-space: nowrap;
   }
-  .rm-btn-select:hover { background: var(--gold-dark); color: #fff; }
+  .ds-btn-select:hover { background: var(--gold-dark); color: #fff; }
 
   /* Extras dentro de la habitación */
-  .rm-room-extras {
+  .ds-room-extras {
     border-top: 1px solid var(--border);
     padding: 0 24px 24px;
   }
-  .rm-extras-toggle {
+  .ds-extras-toggle {
     width: 100%;
     background: none;
     border: none;
@@ -500,32 +500,32 @@ const CSS = `
     font-family: 'DM Sans', sans-serif;
     color: var(--ink-mid); font-size: 13px; font-weight: 500;
   }
-  .rm-extras-toggle:hover { color: var(--gold-dark); }
+  .ds-extras-toggle:hover { color: var(--gold-dark); }
 
-  .rm-extras-grid {
+  .ds-extras-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
     gap: 10px;
     padding-top: 16px;
   }
 
-  .rm-extra-item {
+  .ds-extra-item {
     border: 1.5px solid var(--border);
     border-radius: 10px;
     overflow: hidden;
     transition: border-color 0.15s;
     cursor: pointer;
-    background: var(--warm-white);
+    background: var(--wads-white);
   }
-  .rm-extra-item.selected { border-color: var(--gold); background: rgba(184,151,90,0.04); }
-  .rm-extra-img { width: 100%; height: 90px; object-fit: cover; display: block; }
-  .rm-extra-body { padding: 10px 12px; }
-  .rm-extra-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; line-height: 1.3; }
-  .rm-extra-desc { font-size: 11px; color: var(--ink-soft); line-height: 1.4; margin-bottom: 8px; }
-  .rm-extra-footer { display: flex; align-items: center; justify-content: space-between; }
-  .rm-extra-price { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 500; color: var(--gold-dark); }
-  .rm-extra-qty { display: flex; align-items: center; gap: 6px; }
-  .rm-qty-btn {
+  .ds-extra-item.selected { border-color: var(--gold); background: rgba(184,151,90,0.04); }
+  .ds-extra-img { width: 100%; height: 90px; object-fit: cover; display: block; }
+  .ds-extra-body { padding: 10px 12px; }
+  .ds-extra-name { font-size: 13px; font-weight: 500; color: var(--ink); margin-bottom: 2px; line-height: 1.3; }
+  .ds-extra-desc { font-size: 11px; color: var(--ink-soft); line-height: 1.4; margin-bottom: 8px; }
+  .ds-extra-footer { display: flex; align-items: center; justify-content: space-between; }
+  .ds-extra-price { font-family: 'Cormorant Garamond', serif; font-size: 18px; font-weight: 500; color: var(--gold-dark); }
+  .ds-extra-qty { display: flex; align-items: center; gap: 6px; }
+  .ds-qty-btn {
     width: 26px; height: 26px; border-radius: 50%;
     border: 1px solid var(--border-strong);
     background: none; cursor: pointer;
@@ -534,124 +534,124 @@ const CSS = `
     font-family: 'DM Sans', sans-serif;
     font-size: 14px; line-height: 1;
   }
-  .rm-qty-btn:hover { background: var(--gold); border-color: var(--gold); color: #fff; }
-  .rm-qty-val { font-size: 14px; font-weight: 500; min-width: 18px; text-align: center; color: var(--ink); }
+  .ds-qty-btn:hover { background: var(--gold); border-color: var(--gold); color: #fff; }
+  .ds-qty-val { font-size: 14px; font-weight: 500; min-width: 18px; text-align: center; color: var(--ink); }
 
   /* Jacuzzi toggle en detail */
-  .rm-jacuzzi-toggle {
+  .ds-jacuzzi-toggle {
     display: flex; align-items: center; justify-content: space-between;
     background: var(--cream); border: 1px solid var(--border);
     border-radius: 10px; padding: 14px 18px; margin-bottom: 24px;
   }
 
   /* ── LAYOUT CON SIDEBAR ── */
-  .rm-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start; }
-  @media (max-width: 860px) { .rm-layout { grid-template-columns: 1fr; } }
+  .ds-layout { display: grid; grid-template-columns: 1fr 340px; gap: 32px; align-items: start; }
+  @media (max-width: 860px) { .ds-layout { grid-template-columns: 1fr; } }
 
   /* Form card */
-  .rm-card {
-    background: var(--warm-white);
+  .ds-card {
+    background: var(--wads-white);
     border: 1px solid var(--border);
     border-radius: 16px;
     padding: 32px;
   }
-  .rm-card h2 {
+  .ds-card h2 {
     font-family: 'Cormorant Garamond', serif;
     font-size: 28px; font-weight: 500; color: var(--ink);
     margin-bottom: 24px;
   }
 
-  .rm-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  @media (max-width: 600px) { .rm-form-grid { grid-template-columns: 1fr; } }
-  .rm-form-full { grid-column: 1 / -1; }
+  .ds-fods-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 600px) { .ds-fods-grid { grid-template-columns: 1fr; } }
+  .ds-fods-full { grid-column: 1 / -1; }
 
-  .rm-check-row {
+  .ds-check-row {
     display: flex; align-items: flex-start; gap: 10px;
     cursor: pointer; padding: 4px 0;
   }
-  .rm-check-row span { font-size: 13px; color: var(--ink-mid); line-height: 1.5; }
+  .ds-check-row span { font-size: 13px; color: var(--ink-mid); line-height: 1.5; }
 
   /* Summary sidebar */
-  .rm-summary {
+  .ds-summary {
     background: var(--ink);
     color: #fff;
     border-radius: 16px;
     padding: 28px;
     position: sticky; top: 80px;
   }
-  .rm-summary-room-img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; margin-bottom: 16px; }
-  .rm-summary-label {
+  .ds-summary-room-img { width: 100%; height: 140px; object-fit: cover; border-radius: 10px; margin-bottom: 16px; }
+  .ds-summary-label {
     font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase;
     color: var(--gold-light); font-weight: 500;
   }
-  .rm-summary-name {
+  .ds-summary-name {
     font-family: 'Cormorant Garamond', serif;
     font-size: 22px; color: #fff; margin: 4px 0 16px;
   }
-  .rm-summary-row {
+  .ds-summary-row {
     display: flex; justify-content: space-between;
     font-size: 13px; color: rgba(255,255,255,0.6);
     padding: 5px 0;
   }
-  .rm-summary-row-val { color: rgba(255,255,255,0.9); }
-  .rm-summary-divider { border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 12px 0; }
-  .rm-summary-total {
+  .ds-summary-row-val { color: rgba(255,255,255,0.9); }
+  .ds-summary-divider { border: none; border-top: 1px solid rgba(255,255,255,0.12); margin: 12px 0; }
+  .ds-summary-total {
     display: flex; justify-content: space-between;
     font-size: 15px; font-weight: 500; color: #fff;
     padding: 6px 0;
   }
-  .rm-summary-total-val {
+  .ds-summary-total-val {
     font-family: 'Cormorant Garamond', serif;
     font-size: 26px; color: var(--gold-light);
   }
-  .rm-summary-deposit {
+  .ds-summary-deposit {
     font-size: 12px; color: rgba(255,255,255,0.45);
     margin-top: 6px; text-align: right;
   }
 
   /* Payment step */
-  .rm-payment-box {
+  .ds-payment-box {
     background: var(--cream);
     border: 1px solid var(--border);
     border-radius: 12px; padding: 20px; margin-bottom: 20px;
   }
-  .rm-payment-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; color: var(--ink-mid); }
-  .rm-payment-row-val { font-weight: 500; color: var(--ink); }
-  .rm-payment-highlight {
+  .ds-payment-row { display: flex; justify-content: space-between; font-size: 14px; padding: 6px 0; color: var(--ink-mid); }
+  .ds-payment-row-val { font-weight: 500; color: var(--ink); }
+  .ds-payment-highlight {
     display: flex; justify-content: space-between; align-items: baseline;
     padding: 8px 0 0; border-top: 1px solid var(--border); margin-top: 4px;
     font-weight: 500;
   }
-  .rm-payment-amount {
+  .ds-payment-amount {
     font-family: 'Cormorant Garamond', serif;
     font-size: 32px; color: var(--gold-dark);
   }
-  .rm-demo-notice {
+  .ds-demo-notice {
     background: rgba(184,151,90,0.08); border: 1px solid var(--border);
     border-radius: 8px; padding: 12px 14px;
     font-size: 12px; color: var(--gold-dark); margin-bottom: 20px;
   }
 
   /* Done */
-  .rm-done {
+  .ds-done {
     text-align: center; max-width: 480px; margin: 60px auto; padding: 0 16px;
   }
-  .rm-done-icon {
+  .ds-done-icon {
     width: 72px; height: 72px; border-radius: 50%;
     background: rgba(184,151,90,0.12); border: 1px solid var(--border);
     display: flex; align-items: center; justify-content: center;
     margin: 0 auto 24px;
     color: var(--gold);
   }
-  .rm-done h2 {
+  .ds-done h2 {
     font-family: 'Cormorant Garamond', serif;
     font-size: 42px; font-weight: 500; color: var(--ink); margin-bottom: 14px;
   }
-  .rm-done p { font-size: 15px; color: var(--ink-soft); line-height: 1.65; margin-bottom: 8px; }
-  .rm-done-ref { font-size: 12px; color: var(--ink-soft); margin-top: 4px; letter-spacing: 0.06em; }
+  .ds-done p { font-size: 15px; color: var(--ink-soft); line-height: 1.65; margin-bottom: 8px; }
+  .ds-done-ref { font-size: 12px; color: var(--ink-soft); margin-top: 4px; letter-spacing: 0.06em; }
 
   /* Back button */
-  .rm-back {
+  .ds-back {
     background: none; border: 1px solid rgba(255,255,255,0.2);
     color: rgba(255,255,255,0.7); border-radius: 7px;
     padding: 6px 14px; font-size: 12px; cursor: pointer;
@@ -659,10 +659,10 @@ const CSS = `
     font-family: 'DM Sans', sans-serif;
     transition: border-color 0.15s, color 0.15s;
   }
-  .rm-back:hover { border-color: var(--gold-light); color: var(--gold-light); }
+  .ds-back:hover { border-color: var(--gold-light); color: var(--gold-light); }
 
   /* Continue btn in layout */
-  .rm-btn-continue {
+  .ds-btn-continue {
     width: 100%;
     background: var(--ink); color: var(--gold-light);
     border: none; border-radius: 10px;
@@ -673,13 +673,13 @@ const CSS = `
     font-family: 'DM Sans', sans-serif;
     margin-top: 20px;
   }
-  .rm-btn-continue:hover { background: var(--gold-dark); color: #fff; }
-  .rm-btn-continue:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ds-btn-continue:hover { background: var(--gold-dark); color: #fff; }
+  .ds-btn-continue:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Building select */
-  .rm-building-select {
+  .ds-building-select {
     display: flex; align-items: center; gap: 10px;
-    background: var(--warm-white);
+    background: var(--wads-white);
     border: 1px solid var(--border-strong);
     border-radius: 10px; padding: 10px 14px;
     cursor: pointer; width: 100%;
@@ -690,23 +690,23 @@ const CSS = `
     padding-right: 32px;
     transition: border-color 0.15s;
   }
-  .rm-building-select:focus { outline: none; border-color: var(--gold); }
-  .rm-building-select:hover:not(:disabled) { border-color: var(--gold); }
-  .rm-building-select:disabled { opacity: 0.5; cursor: not-allowed; }
+  .ds-building-select:focus { outline: none; border-color: var(--gold); }
+  .ds-building-select:hover:not(:disabled) { border-color: var(--gold); }
+  .ds-building-select:disabled { opacity: 0.5; cursor: not-allowed; }
 
   /* Unavailable room overlay */
-  .rm-room-card.rm-unavailable { opacity: 1; pointer-events: none; }
-  .rm-room-card.rm-unavailable .rm-room-img { filter: grayscale(60%); }
-  .rm-room-card.rm-unavailable .rm-room-name,
-  .rm-room-card.rm-unavailable .rm-room-desc { opacity: 0.5; }
-  .rm-room-card.rm-unavailable .rm-room-cta { opacity: 0.4; }
-  .rm-unavailable-overlay {
+  .ds-room-card.ds-unavailable { opacity: 1; pointer-events: none; }
+  .ds-room-card.ds-unavailable .ds-room-img { filter: grayscale(60%); }
+  .ds-room-card.ds-unavailable .ds-room-name,
+  .ds-room-card.ds-unavailable .ds-room-desc { opacity: 0.5; }
+  .ds-room-card.ds-unavailable .ds-room-cta { opacity: 0.4; }
+  .ds-unavailable-overlay {
     position: absolute; inset: 0;
     background: rgba(250,247,242,0.6);
     display: flex; align-items: center; justify-content: center;
     border-radius: 16px;
   }
-  .rm-unavailable-pill {
+  .ds-unavailable-pill {
     background: var(--ink); color: #fff;
     border-radius: 30px; padding: 8px 20px;
     font-size: 13px; font-weight: 500; letter-spacing: 0.04em;
@@ -715,27 +715,27 @@ const CSS = `
 
 
   /* Footer */
-  .rm-footer {
+  .ds-footer {
     background: var(--ink); color: rgba(255,255,255,0.4);
     text-align: center; padding: 20px 24px;
     font-size: 12px; line-height: 1.7;
     border-top: 1px solid rgba(184,151,90,0.2);
   }
-  .rm-footer strong { color: var(--gold-light); }
+  .ds-footer strong { color: var(--gold-light); }
 
   /* Decoration message inputs */
-  .rm-deco-msg {
+  .ds-deco-msg {
     margin-top: 10px;
     padding-top: 10px;
     border-top: 1px dashed var(--border);
     display: flex; flex-direction: column; gap: 10px;
   }
-  .rm-deco-msg-field { display: flex; flex-direction: column; gap: 4px; }
-  .rm-deco-msg-label {
+  .ds-deco-msg-field { display: flex; flex-direction: column; gap: 4px; }
+  .ds-deco-msg-label {
     font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase;
     font-weight: 500; color: var(--gold-dark);
   }
-  .rm-deco-msg-input {
+  .ds-deco-msg-input {
     width: 100%;
     border: 1px solid var(--border-strong);
     border-radius: 8px;
@@ -743,12 +743,12 @@ const CSS = `
     font-size: 13px;
     font-family: 'DM Sans', sans-serif;
     color: var(--ink);
-    background: var(--warm-white);
+    background: var(--wads-white);
   }
-  .rm-deco-msg-input:focus { outline: none; border-color: var(--gold); }
-  .rm-deco-msg-input.rm-invalid { border-color: #c0392b; background: rgba(192,57,43,0.05); }
-  .rm-deco-msg-hint { font-size: 10px; color: var(--ink-soft); }
-  .rm-deco-msg-hint.rm-over { color: #c0392b; }
+  .ds-deco-msg-input:focus { outline: none; border-color: var(--gold); }
+  .ds-deco-msg-input.ds-invalid { border-color: #c0392b; background: rgba(192,57,43,0.05); }
+  .ds-deco-msg-hint { font-size: 10px; color: var(--ink-soft); }
+  .ds-deco-msg-hint.ds-over { color: #c0392b; }
 `;
 
 // ─────────────────────────────────────────────
@@ -938,13 +938,6 @@ function PublicReservePage() {
       setDidSearch(false);
     }
   }, [didSearch, availableRooms.length]);
-
-  useEffect(() => {
-    if (rooms) {
-      const uniqueBuildings = [...new Set(rooms.map(r => r.building))];
-      console.log("UNIQUE BUILDINGS:", uniqueBuildings);
-    }
-  }, [rooms]);
 
   const selectRoom = (r: RoomLite) => {
     setRoom(r);
@@ -1169,50 +1162,50 @@ function PublicReservePage() {
     const bedOver = countWords(m.bed) > BED_MESSAGE_MAX_WORDS;
     const screenOver = countWords(m.screen) > SCREEN_MESSAGE_MAX_WORDS;
     return (
-      <div className="rm-deco-msg" onClick={e => e.stopPropagation()}>
-        <div className="rm-deco-msg-field">
-          <label className="rm-deco-msg-label">Frase en la cama (máx. {BED_MESSAGE_MAX_WORDS} palabras) *</label>
+      <div className="ds-deco-msg" onClick={e => e.stopPropagation()}>
+        <div className="ds-deco-msg-field">
+          <label className="ds-deco-msg-label">Frase en la cama (máx. {BED_MESSAGE_MAX_WORDS} palabras) *</label>
           <input
-            className={`rm-deco-msg-input${bedOver ? " rm-invalid" : ""}`}
+            className={`ds-deco-msg-input${bedOver ? " ds-invalid" : ""}`}
             value={m.bed}
             maxLength={40}
             placeholder="Ej. Te amo"
             onChange={e => setDecoMessage(ex.id, "bed", e.target.value)}
           />
-          {bedOver && <span className="rm-deco-msg-hint rm-over">Máximo {BED_MESSAGE_MAX_WORDS} palabras</span>}
+          {bedOver && <span className="ds-deco-msg-hint ds-over">Máximo {BED_MESSAGE_MAX_WORDS} palabras</span>}
         </div>
-        <div className="rm-deco-msg-field">
-          <label className="rm-deco-msg-label">Frase en el cristal o pantalla LED (máx. {SCREEN_MESSAGE_MAX_WORDS} palabras) *</label>
+        <div className="ds-deco-msg-field">
+          <label className="ds-deco-msg-label">Frase en el cristal o pantalla LED (máx. {SCREEN_MESSAGE_MAX_WORDS} palabras) *</label>
           <input
-            className={`rm-deco-msg-input${screenOver ? " rm-invalid" : ""}`}
+            className={`ds-deco-msg-input${screenOver ? " ds-invalid" : ""}`}
             value={m.screen}
             maxLength={120}
             placeholder="Ej. Feliz aniversario mi amor"
             onChange={e => setDecoMessage(ex.id, "screen", e.target.value)}
           />
-          {screenOver && <span className="rm-deco-msg-hint rm-over">Máximo {SCREEN_MESSAGE_MAX_WORDS} palabras</span>}
+          {screenOver && <span className="ds-deco-msg-hint ds-over">Máximo {SCREEN_MESSAGE_MAX_WORDS} palabras</span>}
         </div>
       </div>
     );
   };
 
   return (
-    <div className="rm-page">
+    <div className="ds-page">
       <style>{CSS}</style>
 
       {/* Age banner */}
-      <div className="rm-age-banner">
+      <div className="ds-age-banner">
         <ShieldCheck size={14} />
         Reservas exclusivas para mayores de 18 años · Solo adultos
       </div>
 
       {/* Header */}
-      <header className="rm-header">
-        <div className="rm-header-inner">
-          <div className="rm-logo">Rooms <span>Madrid</span></div>
+      <header className="ds-header">
+        <div className="ds-header-inner">
+          <div className="ds-logo">Demo <span>Stays</span></div>
 
           {step !== "search" && step !== "done" && (
-            <button className="rm-back" onClick={handleBack}>← Atrás</button>
+            <button className="ds-back" onClick={handleBack}>← Atrás</button>
           )}
 
           <a
@@ -1233,7 +1226,7 @@ function PublicReservePage() {
             demostays.example
           </a>
 
-          <div className="rm-help" style={{ marginLeft: 12 }}>
+          <div className="ds-help" style={{ marginLeft: 12 }}>
             <Phone size={13} />
             <span>¿Reservas?</span>
             <a href={CONTACTS[building]?.phones[0]?.href ?? "tel:+34900000001"}>
@@ -1245,40 +1238,40 @@ function PublicReservePage() {
 
       {/* Step indicator */}
       {step !== "done" && (
-        <div className="rm-steps">
-          <div className="rm-steps-inner">
+        <div className="ds-steps">
+          <div className="ds-steps-inner">
             {STEPS.map((s, i) => (
               <div key={s.key} style={{ display: "contents" }}>
-                <div className={`rm-step ${i === currentStepIdx ? "active" : i < currentStepIdx ? "done" : ""}`}>
-                  <div className="rm-step-num">{i < currentStepIdx ? "✓" : i + 1}</div>
+                <div className={`ds-step ${i === currentStepIdx ? "active" : i < currentStepIdx ? "done" : ""}`}>
+                  <div className="ds-step-num">{i < currentStepIdx ? "✓" : i + 1}</div>
                   <span>{s.label}</span>
                 </div>
-                {i < STEPS.length - 1 && <div className="rm-step-sep" />}
+                {i < STEPS.length - 1 && <div className="ds-step-sep" />}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      <main className="rm-main">
+      <main className="ds-main">
 
         {/* ── STEP 1: SEARCH ── */}
         {step === "search" && (
           <section>
-            <div className="rm-hero">
-              <div className="rm-hero-eyebrow">
+            <div className="ds-hero">
+              <div className="ds-hero-eyebrow">
                 <Star size={12} />
                 Madrid · Habitaciones temáticas
                 <Star size={12} />
               </div>
-              <h1 className="rm-serif">Tu escapada <em>perfecta</em><br />empieza aquí</h1>
+              <h1 className="ds-serif">Tu escapada <em>perfecta</em><br />empieza aquí</h1>
               <p>Habitaciones únicas con jacuzzi en el centro de Madrid. Sin registro, con confirmación inmediata.</p>
             </div>
 
-            <div className="rm-search-card">
-              <div className="rm-search-grid">
-                <div className="rm-field">
-                  <label className="rm-label">Fecha</label>
+            <div className="ds-search-card">
+              <div className="ds-search-grid">
+                <div className="ds-field">
+                  <label className="ds-label">Fecha</label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button type="button" variant="outline" className="w-full justify-start text-left font-normal">
@@ -1299,12 +1292,12 @@ function PublicReservePage() {
                   </Popover>
                 </div>
 
-                <div className="rm-field">
-                  <label className="rm-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                <div className="ds-field">
+                  <label className="ds-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <MapPin size={11} />Localización
                   </label>
                   <select
-                    className="rm-building-select"
+                    className="ds-building-select"
                     value={building}
                     onChange={e => setBuilding(e.target.value)}
                   >
@@ -1320,10 +1313,10 @@ function PublicReservePage() {
                   )}
                 </div>
 
-                <div className="rm-field">
-                  <label className="rm-label">Hora de entrada</label>
+                <div className="ds-field">
+                  <label className="ds-label">Hora de entrada</label>
                   <select
-                    className="rm-building-select"
+                    className="ds-building-select"
                     value={time}
                     onChange={e => setTime(e.target.value)}
                   >
@@ -1346,13 +1339,13 @@ function PublicReservePage() {
                   </select>
                 </div>
 
-                <div className="rm-overnight-row">
+                <div className="ds-overnight-row">
                   <div>
-                    <div className="rm-overnight-row-label">
+                    <div className="ds-overnight-row-label">
                       <Moon size={14} style={{ display: "inline", marginRight: 6, verticalAlign: "middle" }} />
                       Noche completa
                     </div>
-                    <div className="rm-overnight-row-sub">
+                    <div className="ds-overnight-row-sub">
                       {overnightAllowed ? "Disponible dom–mié · 22:00 – 10:00" : "Solo dom–mié · 22:00 – 10:00"}
                     </div>
                   </div>
@@ -1364,10 +1357,10 @@ function PublicReservePage() {
                 </div>
 
                 {!isOvernight && (
-                  <div className="rm-field">
-                    <label className="rm-label">Duración</label>
+                  <div className="ds-field">
+                    <label className="ds-label">Duración</label>
                     <select
-                      className="rm-building-select"
+                      className="ds-building-select"
                       value={String(duration)}
                       onChange={e => setDuration(Number(e.target.value))}
                     >
@@ -1376,10 +1369,10 @@ function PublicReservePage() {
                   </div>
                 )}
 
-                <div className="rm-field">
-                  <label className="rm-label">Personas</label>
+                <div className="ds-field">
+                  <label className="ds-label">Personas</label>
                   <select
-                    className="rm-building-select"
+                    className="ds-building-select"
                     value={String(people)}
                     onChange={e => setPeople(Number(e.target.value))}
                   >
@@ -1388,7 +1381,7 @@ function PublicReservePage() {
                 </div>
 
                 <button
-                  className="rm-btn-primary"
+                  className="ds-btn-primary"
                   onClick={goSearch}
                   disabled={!date || !time}
                 >
@@ -1400,8 +1393,8 @@ function PublicReservePage() {
             {/* Available rooms list (shown after date selected) */}
             {date && availableRooms.length > 0 && (
               <div ref={roomsRef} style={{ marginTop: 40 }}>
-                <div className="rm-section-header">
-                  <h2 className="rm-serif">Habitaciones disponibles</h2>
+                <div className="ds-section-header">
+                  <h2 className="ds-serif">Habitaciones disponibles</h2>
                   <p>
                     {startAt?.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
                     {" · "}{time}{" · "}
@@ -1410,7 +1403,7 @@ function PublicReservePage() {
                   </p>
                 </div>
 
-                <div className="rm-rooms-list">
+                <div className="ds-rooms-list">
                   {availableRooms.map(r => {
                     const fromPrice = fromPriceByRoom.get(r.id);
                     const unavailable = conflicts?.has(r.id);
@@ -1419,10 +1412,10 @@ function PublicReservePage() {
                     const selectedInRoom = roomExtras.filter(e => (extraQty[e.id] ?? 0) > 0);
 
                     return (
-                      <div key={r.id} className={`rm-room-card${unavailable ? " rm-unavailable" : ""}`} style={{ position: "relative" }}>
+                      <div key={r.id} className={`ds-room-card${unavailable ? " ds-unavailable" : ""}`} style={{ position: "relative" }}>
                         {unavailable && (
-                          <div className="rm-unavailable-overlay">
-                            <div className="rm-unavailable-pill" style={{ flexDirection: "column", alignItems: "center", gap: 6, padding: "12px 20px", textAlign: "center" }}>
+                          <div className="ds-unavailable-overlay">
+                            <div className="ds-unavailable-pill" style={{ flexDirection: "column", alignItems: "center", gap: 6, padding: "12px 20px", textAlign: "center" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                                 <span style={{ fontSize: 16 }}>🔒</span>
                                 No disponible para este horario
@@ -1437,37 +1430,37 @@ function PublicReservePage() {
                             </div>
                           </div>
                         )}
-                        <div className="rm-room-top">
-                          <img src={getRoomImage(r)} alt={r.name} className="rm-room-img" loading="lazy" />
-                          <div className="rm-room-info">
-                            <div className="rm-room-building">RM {r.building}</div>
-                            <div className="rm-room-name rm-serif">{r.name}</div>
-                            <div className="rm-room-badges">
-                              <span className="rm-badge"><Users size={11} />{r.capacity}+ personas</span>
-                              {r.jacuzzi !== "none" && <span className="rm-badge"><Bath size={11} />Con jacuzzi</span>}
-                              {r.jacuzzi === "none" && <span className="rm-badge"><Droplet size={11} />Sin jacuzzi</span>}
-                              {r.has_tv && <span className="rm-badge"><Tv size={11} />TV</span>}
-                              {r.has_swing && <span className="rm-badge"><Sparkles size={11} />Columpio</span>}
+                        <div className="ds-room-top">
+                          <img src={getRoomImage(r)} alt={r.name} className="ds-room-img" loading="lazy" />
+                          <div className="ds-room-info">
+                            <div className="ds-room-building">Sede {r.building}</div>
+                            <div className="ds-room-name ds-serif">{r.name}</div>
+                            <div className="ds-room-badges">
+                              <span className="ds-badge"><Users size={11} />{r.capacity}+ personas</span>
+                              {r.jacuzzi !== "none" && <span className="ds-badge"><Bath size={11} />Con jacuzzi</span>}
+                              {r.jacuzzi === "none" && <span className="ds-badge"><Droplet size={11} />Sin jacuzzi</span>}
+                              {r.has_tv && <span className="ds-badge"><Tv size={11} />TV</span>}
+                              {r.has_swing && <span className="ds-badge"><Sparkles size={11} />Columpio</span>}
                             </div>
-                            <div className="rm-room-desc">
+                            <div className="ds-room-desc">
                               Habitación temática para {r.capacity} personas.
                               {r.has_swing ? " Incluye columpio del amor." : ""}
                               {r.has_tv ? " Pantalla disponible." : ""}
                             </div>
                           </div>
-                          <div className="rm-room-cta">
+                          <div className="ds-room-cta">
                             <div>
                               {fromPrice !== undefined ? (
                                 <>
-                                  <div className="rm-price-from">desde</div>
-                                  <div className="rm-price-amount rm-serif">{eur(fromPrice)}</div>
+                                  <div className="ds-price-from">desde</div>
+                                  <div className="ds-price-amount ds-serif">{eur(fromPrice)}</div>
                                 </>
                               ) : (
                                 <div style={{ fontSize: 13, color: "var(--ink-soft)" }}>Consultar</div>
                               )}
                             </div>
                             <button
-                              className="rm-btn-select"
+                              className="ds-btn-select"
                               onClick={() => !unavailable && selectRoom(r)}
                               disabled={!!unavailable}
                               style={unavailable ? { opacity: 0.35, cursor: "not-allowed" } : {}}
@@ -1479,9 +1472,9 @@ function PublicReservePage() {
 
                         {/* Extras section inside card */}
                         {roomExtras.length > 0 && (
-                          <div className="rm-room-extras">
+                          <div className="ds-room-extras">
                             <button
-                              className="rm-extras-toggle"
+                              className="ds-extras-toggle"
                               onClick={() => setExpandedExtrasRoom(isExpanded ? null : r.id)}
                             >
                               <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -1506,22 +1499,22 @@ function PublicReservePage() {
                                       <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: 10, marginTop: 16 }}>
                                         {EXTRA_CATEGORY_LABELS[cat] ?? cat}
                                       </div>
-                                      <div className="rm-extras-grid">
+                                      <div className="ds-extras-grid">
                                         {items.map(ex => {
                                           const q = extraQty[ex.id] ?? 0;
                                           const img = getExtraImage(ex);
                                           return (
-                                            <div key={ex.id} className={`rm-extra-item${q > 0 ? " selected" : ""}`}>
-                                              {img && <img src={img} alt={ex.name} className="rm-extra-img" loading="lazy" />}
-                                              <div className="rm-extra-body">
-                                                <div className="rm-extra-name">{ex.name}</div>
-                                                {ex.description && <div className="rm-extra-desc">{ex.description}</div>}
-                                                <div className="rm-extra-footer">
-                                                  <div className="rm-extra-price rm-serif">{eur(Number(ex.price))}</div>
-                                                  <div className="rm-extra-qty">
-                                                    <button className="rm-qty-btn" onClick={e => { e.stopPropagation(); changeQty(ex.id, -1); }}>−</button>
-                                                    <span className="rm-qty-val">{q}</span>
-                                                    <button className="rm-qty-btn" onClick={e => { e.stopPropagation(); changeQty(ex.id, 1); }}>+</button>
+                                            <div key={ex.id} className={`ds-extra-item${q > 0 ? " selected" : ""}`}>
+                                              {img && <img src={img} alt={ex.name} className="ds-extra-img" loading="lazy" />}
+                                              <div className="ds-extra-body">
+                                                <div className="ds-extra-name">{ex.name}</div>
+                                                {ex.description && <div className="ds-extra-desc">{ex.description}</div>}
+                                                <div className="ds-extra-footer">
+                                                  <div className="ds-extra-price ds-serif">{eur(Number(ex.price))}</div>
+                                                  <div className="ds-extra-qty">
+                                                    <button className="ds-qty-btn" onClick={e => { e.stopPropagation(); changeQty(ex.id, -1); }}>−</button>
+                                                    <span className="ds-qty-val">{q}</span>
+                                                    <button className="ds-qty-btn" onClick={e => { e.stopPropagation(); changeQty(ex.id, 1); }}>+</button>
                                                   </div>
                                                 </div>
                                                 {renderDecoMessageInputs(ex)}
@@ -1551,21 +1544,21 @@ function PublicReservePage() {
             )}
 
             {!date && (
-              <div className="rm-trust" style={{ marginTop: 40 }}>
-                <div className="rm-trust-item">
-                  <div className="rm-trust-icon"><Clock size={22} color="var(--gold)" /></div>
-                  <div className="rm-trust-title">Sin registro</div>
-                  <div className="rm-trust-sub">Reserva en 2 minutos.</div>
+              <div className="ds-trust" style={{ marginTop: 40 }}>
+                <div className="ds-trust-item">
+                  <div className="ds-trust-icon"><Clock size={22} color="var(--gold)" /></div>
+                  <div className="ds-trust-title">Sin registro</div>
+                  <div className="ds-trust-sub">Reserva en 2 minutos.</div>
                 </div>
-                <div className="rm-trust-item">
-                  <div className="rm-trust-icon"><CreditCard size={22} color="var(--gold)" /></div>
-                  <div className="rm-trust-title">Solo 30% online</div>
-                  <div className="rm-trust-sub">El resto al llegar.</div>
+                <div className="ds-trust-item">
+                  <div className="ds-trust-icon"><CreditCard size={22} color="var(--gold)" /></div>
+                  <div className="ds-trust-title">Solo 30% online</div>
+                  <div className="ds-trust-sub">El resto al llegar.</div>
                 </div>
-                <div className="rm-trust-item">
-                  <div className="rm-trust-icon"><Flame size={22} color="var(--gold)" /></div>
-                  <div className="rm-trust-title">Confirmación al instante</div>
-                  <div className="rm-trust-sub">Email en segundos.</div>
+                <div className="ds-trust-item">
+                  <div className="ds-trust-icon"><Flame size={22} color="var(--gold)" /></div>
+                  <div className="ds-trust-title">Confirmación al instante</div>
+                  <div className="ds-trust-sub">Email en segundos.</div>
                 </div>
               </div>
             )}
@@ -1574,19 +1567,19 @@ function PublicReservePage() {
 
         {/* ── STEP 2: ROOM DETAIL + extras confirm ── */}
         {step === "room-detail" && room && (
-          <div className="rm-layout">
+          <div className="ds-layout">
             <div>
               {/* Room hero */}
-              <div className="rm-card" style={{ padding: 0, overflow: "hidden", marginBottom: 20 }}>
+              <div className="ds-card" style={{ padding: 0, overflow: "hidden", marginBottom: 20 }}>
                 <img src={getRoomImage(room)} alt={room.name} style={{ width: "100%", height: 260, objectFit: "cover", display: "block" }} />
                 <div style={{ padding: "24px 28px" }}>
-                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: 6 }}>RM {room.building}</div>
+                  <div style={{ fontSize: 11, letterSpacing: "0.14em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: 6 }}>Sede {room.building}</div>
                   <div style={{ fontFamily: "'Cormorant Garamond', serif", fontSize: 30, fontWeight: 500, color: "var(--ink)", marginBottom: 12 }}>{room.name}</div>
-                  <div className="rm-room-badges">
-                    <span className="rm-badge"><Users size={11} />{room.capacity}+ personas</span>
-                    {room.jacuzzi !== "none" && <span className="rm-badge"><Bath size={11} />Con jacuzzi</span>}
-                    {room.has_tv && <span className="rm-badge"><Tv size={11} />TV</span>}
-                    {room.has_swing && <span className="rm-badge"><Sparkles size={11} />Columpio</span>}
+                  <div className="ds-room-badges">
+                    <span className="ds-badge"><Users size={11} />{room.capacity}+ personas</span>
+                    {room.jacuzzi !== "none" && <span className="ds-badge"><Bath size={11} />Con jacuzzi</span>}
+                    {room.has_tv && <span className="ds-badge"><Tv size={11} />TV</span>}
+                    {room.has_swing && <span className="ds-badge"><Sparkles size={11} />Columpio</span>}
                   </div>
 
                 </div>
@@ -1594,8 +1587,8 @@ function PublicReservePage() {
 
               {/* Extras confirmation */}
               {extras && extras.length > 0 && (
-                <div className="rm-card">
-                  <h2 className="rm-serif" style={{ marginBottom: 6 }}>Extras para tu estancia</h2>
+                <div className="ds-card">
+                  <h2 className="ds-serif" style={{ marginBottom: 6 }}>Extras para tu estancia</h2>
                   <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 24 }}>Opcional — puedes continuar sin añadir nada.</p>
 
                   {(["decoration", "hookah", "accessories", "drinks"] as const).map(cat => {
@@ -1606,30 +1599,30 @@ function PublicReservePage() {
                         <div style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--gold)", fontWeight: 500, marginBottom: 12 }}>
                           {EXTRA_CATEGORY_LABELS[cat]}
                         </div>
-                        <div className="rm-extras-grid">
+                        <div className="ds-extras-grid">
                           {items.map(ex => {
                             const q = extraQty[ex.id] ?? 0;
                             const img = getExtraImage(ex);
                             const isGift = breakdown?.giftedExtraIds.includes(ex.id);
                             return (
-                              <div key={ex.id} className={`rm-extra-item${q > 0 ? " selected" : ""}`}>
-                                {img && <img src={img} alt={ex.name} className="rm-extra-img" loading="lazy" />}
-                                <div className="rm-extra-body">
+                              <div key={ex.id} className={`ds-extra-item${q > 0 ? " selected" : ""}`}>
+                                {img && <img src={img} alt={ex.name} className="ds-extra-img" loading="lazy" />}
+                                <div className="ds-extra-body">
                                   <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 4, marginBottom: 2 }}>
-                                    <div className="rm-extra-name">{ex.name}</div>
+                                    <div className="ds-extra-name">{ex.name}</div>
                                     {isGift && q === 0 && (
                                       <span style={{ background: "var(--cream-dark)", border: "1px solid var(--border)", borderRadius: 6, padding: "2px 7px", fontSize: 10, fontWeight: 500, color: "var(--gold-dark)", whiteSpace: "nowrap" }}>
                                         <Gift size={9} style={{ display: "inline", marginRight: 3 }} />Regalo
                                       </span>
                                     )}
                                   </div>
-                                  {ex.description && <div className="rm-extra-desc">{ex.description}</div>}
-                                  <div className="rm-extra-footer">
-                                    <div className="rm-extra-price rm-serif">{eur(Number(ex.price))}</div>
-                                    <div className="rm-extra-qty">
-                                      <button className="rm-qty-btn" onClick={() => changeQty(ex.id, -1)}>−</button>
-                                      <span className="rm-qty-val">{q}</span>
-                                      <button className="rm-qty-btn" onClick={() => changeQty(ex.id, 1)}>+</button>
+                                  {ex.description && <div className="ds-extra-desc">{ex.description}</div>}
+                                  <div className="ds-extra-footer">
+                                    <div className="ds-extra-price ds-serif">{eur(Number(ex.price))}</div>
+                                    <div className="ds-extra-qty">
+                                      <button className="ds-qty-btn" onClick={() => changeQty(ex.id, -1)}>−</button>
+                                      <span className="ds-qty-val">{q}</span>
+                                      <button className="ds-qty-btn" onClick={() => changeQty(ex.id, 1)}>+</button>
                                     </div>
                                   </div>
                                   {renderDecoMessageInputs(ex)}
@@ -1645,7 +1638,7 @@ function PublicReservePage() {
               )}
 
               <button
-                className="rm-btn-continue"
+                className="ds-btn-continue"
                 onClick={() => {
                   const err = validateDecoMessages();
                   if (err) return toast.error(err);
@@ -1661,20 +1654,20 @@ function PublicReservePage() {
 
         {/* ── STEP 3: DETAILS ── */}
         {step === "details" && room && (
-          <div className="rm-layout">
-            <div className="rm-card">
-              <h2 className="rm-serif">Tus datos</h2>
-              <div className="rm-form-grid">
-                <div className="rm-field">
-                  <label className="rm-label">Nombre completo *</label>
+          <div className="ds-layout">
+            <div className="ds-card">
+              <h2 className="ds-serif">Tus datos</h2>
+              <div className="ds-fods-grid">
+                <div className="ds-field">
+                  <label className="ds-label">Nombre completo *</label>
                   <Input value={customerName} onChange={e => setCustomerName(e.target.value)} maxLength={100} />
                 </div>
-                <div className="rm-field">
-                  <label className="rm-label">Email *</label>
+                <div className="ds-field">
+                  <label className="ds-label">Email *</label>
                   <Input type="email" value={customerEmail} onChange={e => setCustomerEmail(e.target.value)} maxLength={255} />
                 </div>
-                <div className="rm-field rm-form-full">
-                  <label className="rm-label">Teléfono (opcional)</label>
+                <div className="ds-field ds-fods-full">
+                  <label className="ds-label">Teléfono (opcional)</label>
                   <Input type="tel" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} maxLength={30} />
                 </div>
               </div>
@@ -1682,17 +1675,17 @@ function PublicReservePage() {
               <Separator style={{ margin: "24px 0" }} />
 
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                <label className="rm-check-row">
+                <label className="ds-check-row">
                   <Checkbox checked={adult} onCheckedChange={v => setAdult(v === true)} />
                   <span>Confirmo que soy <strong>mayor de 18 años</strong> y acepto las condiciones de reserva. *</span>
                 </label>
-                <label className="rm-check-row">
+                <label className="ds-check-row">
                   <Checkbox checked={noContact} onCheckedChange={v => setNoContact(v === true)} />
                   <span>No quiero recibir comunicaciones comerciales.</span>
                 </label>
               </div>
 
-              <button className="rm-btn-continue" onClick={submitDetails}>
+              <button className="ds-btn-continue" onClick={submitDetails}>
                 Continuar al pago <ChevronRight size={16} />
               </button>
             </div>
@@ -1702,40 +1695,40 @@ function PublicReservePage() {
 
         {/* ── STEP 4: PAYMENT ── */}
         {step === "payment" && room && breakdown && (
-          <div className="rm-layout">
-            <div className="rm-card">
-              <h2 className="rm-serif">Pago del depósito</h2>
+          <div className="ds-layout">
+            <div className="ds-card">
+              <h2 className="ds-serif">Pago del depósito</h2>
               <p style={{ fontSize: 14, color: "var(--ink-soft)", marginBottom: 24, lineHeight: 1.65 }}>
                 Para confirmar tu reserva solo necesitas pagar el <strong>30%</strong> ahora. El resto lo pagas en el hotel al llegar.
               </p>
 
-              <div className="rm-payment-box">
-                <div className="rm-payment-row">
+              <div className="ds-payment-box">
+                <div className="ds-payment-row">
                   <span>Total reserva</span>
-                  <span className="rm-payment-row-val">{eur(payableTotal)}</span>
+                  <span className="ds-payment-row-val">{eur(payableTotal)}</span>
                 </div>
                 {discountPct > 0 && (
-                  <div className="rm-payment-row">
+                  <div className="ds-payment-row">
                     <span>Descuento aplicado</span>
-                    <span className="rm-payment-row-val" style={{ color: "var(--gold-dark)" }}>
+                    <span className="ds-payment-row-val" style={{ color: "var(--gold-dark)" }}>
                       −{(discountPct * 100).toLocaleString("es-ES")}% (antes {eur(breakdown.total)})
                     </span>
                   </div>
                 )}
-                <div className="rm-payment-row">
+                <div className="ds-payment-row">
                   <span>A pagar en el hotel</span>
-                  <span className="rm-payment-row-val">{eur(Math.max(0, payableTotal - depositAmount))}</span>
+                  <span className="ds-payment-row-val">{eur(Math.max(0, payableTotal - depositAmount))}</span>
                 </div>
-                <div className="rm-payment-highlight">
+                <div className="ds-payment-highlight">
                   <span style={{ fontSize: 14 }}>Depósito ahora (30%)</span>
-                  <span className="rm-payment-amount rm-serif">{eur(depositAmount)}</span>
+                  <span className="ds-payment-amount ds-serif">{eur(depositAmount)}</span>
                 </div>
               </div>
 
               {/* Discount code */}
               <div style={{ display: "flex", gap: 8, marginBottom: 20, alignItems: "flex-end" }}>
-                <div className="rm-field" style={{ flex: 1 }}>
-                  <label className="rm-label">Código de descuento</label>
+                <div className="ds-field" style={{ flex: 1 }}>
+                  <label className="ds-label">Código de descuento</label>
                   <Input
                     value={discountInput}
                     onChange={e => setDiscountInput(e.target.value)}
@@ -1746,7 +1739,7 @@ function PublicReservePage() {
                 <Button type="button" variant="outline" onClick={applyDiscount}>Aplicar</Button>
               </div>
 
-              <button className="rm-btn-primary" style={{ display: "flex" }} onClick={createReservation} disabled={paying}>
+              <button className="ds-btn-primary" style={{ display: "flex" }} onClick={createReservation} disabled={paying}>
                 {paying ? "Redirigiendo al TPV…" : `Pagar ${eur(depositAmount)} con tarjeta`}
               </button>
 
@@ -1760,17 +1753,17 @@ function PublicReservePage() {
 
         {/* ── STEP 5: DONE ── */}
         {step === "done" && (
-          <div className="rm-done">
-            <div className="rm-done-icon"><CheckCircle2 size={32} /></div>
-            <h2 className="rm-serif">¡Reserva<br />confirmada!</h2>
+          <div className="ds-done">
+            <div className="ds-done-icon"><CheckCircle2 size={32} /></div>
+            <h2 className="ds-serif">¡Reserva<br />confirmada!</h2>
             <p>
               Te hemos enviado un email de confirmación a <strong>{customerEmail}</strong> con todos los detalles.
               Si no lo encuentras, revisa la carpeta de spam.
             </p>
-            <p className="rm-done-ref">Referencia: {reservationId?.slice(0, 8)?.toUpperCase()}</p>
+            <p className="ds-done-ref">Referencia: {reservationId?.slice(0, 8)?.toUpperCase()}</p>
             <div style={{ marginTop: 32 }}>
               <button
-                className="rm-btn-primary"
+                className="ds-btn-primary"
                 style={{ maxWidth: 280, margin: "0 auto" }}
                 onClick={() => {
                   setStep("search"); setRoom(null); setExtraQty({}); setDecoMessages({});
@@ -1786,7 +1779,7 @@ function PublicReservePage() {
         )}
       </main>
 
-      <footer className="rm-footer">
+      <footer className="ds-footer">
         <div>© Demo Stays · Solo +18 · Bebe con responsabilidad</div>
         <div>Pago: <strong>30% online</strong>, resto en el hotel · Confirmación inmediata por email</div>
         <div style={{ marginTop: 8, display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
@@ -1818,65 +1811,65 @@ function SummaryBar({
   breakdown: PriceBreakdown | null;
 }) {
   return (
-    <div className="rm-summary">
-      <img src={getRoomImage(room)} alt="" className="rm-summary-room-img" />
-      <div className="rm-summary-label">Tu habitación</div>
-      <div className="rm-summary-name rm-serif">{room.name} · RM {room.building}</div>
+    <div className="ds-summary">
+      <img src={getRoomImage(room)} alt="" className="ds-summary-room-img" />
+      <div className="ds-summary-label">Tu habitación</div>
+      <div className="ds-summary-name ds-serif">{room.name} · Sede {room.building}</div>
 
-      <hr className="rm-summary-divider" />
+      <hr className="ds-summary-divider" />
 
-      <div className="rm-summary-row">
+      <div className="ds-summary-row">
         <span>Entrada</span>
-        <span className="rm-summary-row-val">
+        <span className="ds-summary-row-val">
           {startAt?.toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
-      <div className="rm-summary-row">
+      <div className="ds-summary-row">
         <span>Salida</span>
-        <span className="rm-summary-row-val">
+        <span className="ds-summary-row-val">
           {endAt?.toLocaleString("es-ES", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
         </span>
       </div>
-      <div className="rm-summary-row">
+      <div className="ds-summary-row">
         <span>Duración</span>
-        <span className="rm-summary-row-val">{isOvernight ? "Noche completa" : DURATION_LABELS[duration]}</span>
+        <span className="ds-summary-row-val">{isOvernight ? "Noche completa" : DURATION_LABELS[duration]}</span>
       </div>
-      <div className="rm-summary-row">
+      <div className="ds-summary-row">
         <span>Personas</span>
-        <span className="rm-summary-row-val">{people}</span>
+        <span className="ds-summary-row-val">{people}</span>
       </div>
 
       {breakdown && (
         <>
-          <hr className="rm-summary-divider" />
-          <div className="rm-summary-row">
+          <hr className="ds-summary-divider" />
+          <div className="ds-summary-row">
             <span>Habitación</span>
-            <span className="rm-summary-row-val">{eur(breakdown.base)}</span>
+            <span className="ds-summary-row-val">{eur(breakdown.base)}</span>
           </div>
           {breakdown.thirdPerson > 0 && (
-            <div className="rm-summary-row">
+            <div className="ds-summary-row">
               <span>Supl. personas</span>
-              <span className="rm-summary-row-val">{eur(breakdown.thirdPerson)}</span>
+              <span className="ds-summary-row-val">{eur(breakdown.thirdPerson)}</span>
             </div>
           )}
           {breakdown.dynamicSurcharge > 0 && (
-            <div className="rm-summary-row">
+            <div className="ds-summary-row">
               <span>Recargo</span>
-              <span className="rm-summary-row-val" style={{ color: "#fcd34d" }}>{eur(breakdown.dynamicSurcharge)}</span>
+              <span className="ds-summary-row-val" style={{ color: "#fcd34d" }}>{eur(breakdown.dynamicSurcharge)}</span>
             </div>
           )}
           {breakdown.extrasTotal > 0 && (
-            <div className="rm-summary-row">
+            <div className="ds-summary-row">
               <span>Extras</span>
-              <span className="rm-summary-row-val">{eur(breakdown.extrasTotal)}</span>
+              <span className="ds-summary-row-val">{eur(breakdown.extrasTotal)}</span>
             </div>
           )}
-          <hr className="rm-summary-divider" />
-          <div className="rm-summary-total">
+          <hr className="ds-summary-divider" />
+          <div className="ds-summary-total">
             <span>Total</span>
-            <span className="rm-summary-total-val rm-serif">{eur(breakdown.total)}</span>
+            <span className="ds-summary-total-val ds-serif">{eur(breakdown.total)}</span>
           </div>
-          <div className="rm-summary-deposit">
+          <div className="ds-summary-deposit">
             Depósito 30% online: <strong style={{ color: "var(--gold-light)" }}>{eur(breakdown.total * 0.3)}</strong>
           </div>
         </>

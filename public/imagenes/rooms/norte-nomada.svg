@@ -1,10 +1,10 @@
-﻿<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Empire State · Norte">
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="600" viewBox="0 0 800 600" role="img" aria-label="Nomada · Norte">
   <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-    <stop offset="0" stop-color="#3a4a2b"/><stop offset="1" stop-color="#1a1410"/>
+    <stop offset="0" stop-color="#554a2b"/><stop offset="1" stop-color="#1a1410"/>
   </linearGradient></defs>
   <rect width="800" height="600" fill="url(#g)"/>
   <rect x="24" y="24" width="752" height="552" fill="none" stroke="#d4b483" stroke-opacity="0.5" stroke-width="2"/>
-  <text x="400" y="290" font-family="Georgia, serif" font-size="46" fill="#f0e6d2" text-anchor="middle">Empire State · Norte</text>
+  <text x="400" y="290" font-family="Georgia, serif" font-size="46" fill="#f0e6d2" text-anchor="middle">Nomada · Norte</text>
   <text x="400" y="340" font-family="Arial, sans-serif" font-size="20" fill="#d4b483" letter-spacing="3" text-anchor="middle">DEMO STAYS</text>
   <text x="400" y="372" font-family="Arial, sans-serif" font-size="14" fill="#b8975a" text-anchor="middle">imagen de ejemplo</text>
 </svg>

@@ -88,7 +88,7 @@ function RoomsPage() {
 
       {buildings.map((b) => (
         <div key={b} className="space-y-2">
-          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">RM {b}</h2>
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Sede {b}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {rooms?.filter((r) => r.building === b).map((r) => (
               <Card key={r.id}>

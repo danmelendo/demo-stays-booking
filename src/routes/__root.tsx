@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
+import { DemoBanner } from "@/components/DemoBanner";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -39,6 +40,7 @@ function RootComponent() {
       <AuthProvider>
         <TooltipProvider>
           <Outlet />
+          <DemoBanner />
           <Toaster richColors position="top-right" />
         </TooltipProvider>
       </AuthProvider>

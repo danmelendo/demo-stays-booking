@@ -1,13 +1,58 @@
 # Demo Stays · Motor de reservas y panel de recepción
 
 > Aplicación full‑stack de reservas para un negocio de habitaciones temáticas por horas:
-> portal público de reserva con pasarela de pago real y panel interno de gestión para recepción.
+> portal público de reserva con pasarela de pago y panel interno de gestión para recepción.
 >
 > ⚠️ **Repositorio de portfolio.** Es una versión *anonimizada* de un proyecto real en producción.
 > Se han sustituido marca, datos de contacto, credenciales e imágenes por valores de ejemplo.
 > No contiene claves, datos de clientes ni de personal reales.
 
 ---
+
+## 🧪 Esta demo funciona SIN backend
+
+Para que cualquiera pueda **abrir y probar la aplicación sin instalar ni configurar nada**,
+esta versión **no incluye el backend**. El proyecto real se apoya en **Supabase** (Postgres,
+Auth, Edge Functions), **Redsys/TPV** y **Resend**; reproducir eso exigiría crear un proyecto
+Supabase, aplicar migraciones, dar de alta credenciales de pago y configurar secretos — una
+barrera que impediría ver la funcionalidad de un vistazo.
+
+En su lugar, cuando **no hay credenciales de Supabase configuradas**, la app arranca contra un
+**backend simulado que vive en tu navegador** (`src/integrations/demo/`):
+
+- Un **dataset de ejemplo en memoria** (habitaciones, tarifas, extras, clientes y reservas)
+  que imita el esquema real de Postgres, **persistido en `localStorage`** para que tus cambios
+  sobrevivan a recargas.
+- Un **cliente mock** que reimplementa la porción de la API de Supabase que usa la app
+  (query builder `from().select().eq()…`, `auth`, `rpc`, Edge Functions y Realtime), de modo
+  que **ni una sola pantalla necesita tocarse**: el resto del código cree estar hablando con
+  Supabase.
+- El **pago Redsys se simula** (se marca la señal como pagada y redirige a la pantalla de
+  confirmación) y el **email de confirmación es un no‑op**.
+
+Verás un pequeño aviso flotante **«Modo demo»** con un botón para **reiniciar los datos** a su
+estado inicial. Para conectar un Supabase real, basta con definir las variables `VITE_SUPABASE_*`
+(ver más abajo): la app detecta las credenciales y deja de usar el mock automáticamente.
+
+> El objetivo de la demo es enseñar **la arquitectura, el flujo de usuario y el código**, no
+> operar un backend real. Por eso este repositorio de portfolio **no incluye** el backend
+> (esquema, migraciones ni Edge Functions): la app es autónoma gracias al mock del navegador.
+
+## 🚀 Probar la demo (sin backend)
+
+```bash
+bun install      # o npm install
+bun run dev      # arranca Vite — abre la URL que imprime (p. ej. http://localhost:5173)
+```
+
+No hace falta `.env` ni ningún servicio externo. Al abrirla:
+
+- **`/reservar`** — portal público: busca disponibilidad, elige habitación y extras, rellena
+  tus datos y completa una reserva (pago simulado → pantalla de confirmación).
+- **`/`** o **`/login`** — entras ya autenticado como **administrador demo** en el panel interno
+  (cualquier email/contraseña sirve para volver a entrar si cierras sesión).
+
+Datos y cambios se guardan en tu navegador; usa **«Reiniciar datos»** del aviso para restaurarlos.
 
 ## ✨ Qué hace
 
@@ -17,26 +62,27 @@
 - Extras configurables (decoración, bebidas, cachimba, accesorios) con mensajes
   personalizados para las decoraciones de gama alta.
 - Cálculo de precio en cliente + reserva con **señal del 30 % online** y resto en el hotel.
-- Pago real integrado con **Redsys / TPV** (firma HMAC con clave derivada por **3DES**).
-- Email de confirmación transaccional (Resend) tras el pago.
+- Pago integrado con **Redsys / TPV** (firma HMAC con clave derivada por **3DES**) — *simulado en la demo*.
+- Email de confirmación transaccional (Resend) tras el pago — *desactivado en la demo*.
 
 **Panel interno de recepción** (`/_app/*`)
 - Calendario y agenda del día, gestión de reservas, clientes y tarifas.
 - Roles (administrador / recepción) con control de acceso.
 - Catálogo de extras y tarifas editable.
+- Notificaciones en tiempo real al entrar nuevas reservas.
 
 ## 🧱 Stack técnico
 
 | Capa | Tecnología |
 |------|-----------|
-| Framework | **TanStack Start** (SSR) + **TanStack Router** |
+| Framework | **TanStack Start / Router** (SPA con Vite) |
 | UI | React 19, Tailwind CSS, Radix UI / shadcn, `react-hook-form` + Zod |
 | Datos cliente | TanStack Query |
-| Backend | **Supabase** — Postgres, Row Level Security, Auth, **Edge Functions** (Deno) |
-| Pagos | **Redsys** (creación de pago + notificación asíncrona, firma `3DES` + `HMAC‑SHA256`) |
-| Email | Resend |
-| Build / Deploy | Vite 7, **Cloudflare** (`@cloudflare/vite-plugin`, Wrangler) |
-| Tooling | TypeScript, ESLint, Prettier, Bun |
+| Backend (producción) | **Supabase** — Postgres, Row Level Security, Auth, **Edge Functions** (Deno) |
+| Backend (esta demo) | **Mock en navegador** (`src/integrations/demo/`) sobre `localStorage` |
+| Pagos | **Redsys** (firma `3DES` + `HMAC‑SHA256`) — *simulado en la demo* |
+| Email | Resend — *desactivado en la demo* |
+| Tooling | TypeScript, ESLint, Prettier, Bun, Vite 7 |
 
 ## 🏗️ Arquitectura
 
@@ -44,39 +90,32 @@
 src/
   routes/            Rutas TanStack (público: /reservar, /reservar-ok; interno: /_app/*)
   components/        UI compartida y diálogos (NewReservationDialog, AppSidebar, ...)
-  integrations/      Cliente Supabase (browser + server) y middleware de auth
+  integrations/
+    supabase/        Cliente de datos: elige backend real o mock según haya credenciales + tipos
+    demo/            Backend simulado de la demo: dataset seed + cliente mock
   lib/               Lógica de precios, datos y helpers
-supabase/
-  migrations/        Esquema versionado (rooms, rates, reservations, extras, RLS, staff)
-  functions/         Edge Functions: create-redsys-payment, redsys-notification,
-                     send-reservation-confirmation
 ```
 
 Aspectos destacables a nivel de ingeniería:
-- **Pasarela de pago server‑side segura:** la clave secreta nunca toca el navegador; la firma
-  Redsys se genera en una Edge Function derivando la clave por 3DES sobre el número de pedido.
+- **Pasarela de pago server‑side segura:** en producción la clave secreta nunca toca el
+  navegador; la firma Redsys se genera en una Edge Function derivando la clave por 3DES sobre
+  el número de pedido.
 - **Flujo de pago asíncrono:** la confirmación llega por notificación servidor‑a‑servidor
   (webhook de Redsys), no por la redirección del usuario.
 - **Seguridad de datos con RLS:** políticas por rol en Postgres; el rol anónimo solo puede
   crear reservas, no leer datos de otros.
-- **SSR + hidratación** con TanStack Start desplegado sobre el runtime de Cloudflare.
+- **Capa de datos desacoplada:** la app consume un único cliente (`@/integrations/supabase/client`)
+  y todo el resto del código es agnóstico a si detrás hay Supabase real o el mock de la demo.
 
-## 🚀 Puesta en marcha
+## 🔌 Versión de producción
 
-```bash
-bun install            # o npm install
-cp .env.example .env    # rellena con tu propio proyecto Supabase de pruebas
-bun run dev            # arranca Vite en modo desarrollo
-```
+En producción la aplicación corre sobre **Supabase** (Postgres + Row Level Security + Auth +
+Edge Functions en Deno), con pagos vía **Redsys / TPV** y emails con **Resend**. Ese backend
+**no se incluye** en este repositorio de portfolio para no exponer esquema ni datos del cliente;
+la demo lo sustituye por el mock del navegador descrito arriba.
 
-Para un entorno funcional necesitas:
-1. Un proyecto **Supabase** propio y aplicar las migraciones de `supabase/migrations`.
-2. Configurar las variables de `.env` (ver `.env.example`).
-3. (Opcional) Credenciales de **Redsys en entorno de pruebas** para el pago real, o
-   `REDSYS_BYPASS=true` para saltar la pasarela en local.
-
-Las migraciones siembran usuarios de demo (p. ej. `admin@demostays.example`) con
-**contraseñas de ejemplo** — cámbialas en cualquier despliegue propio.
+Si defines tus propias variables `VITE_SUPABASE_*` (ver `.env.example`), la app detecta las
+credenciales y deja de usar el mock para hablar con el proyecto Supabase que apuntes.
 
 ## 📷 Imágenes
 
@@ -86,4 +125,5 @@ Las fotografías reales del negocio se han reemplazado por **placeholders genera
 ---
 
 *Proyecto desarrollado por mí como aplicación real en producción; este repositorio es una
-versión saneada para mostrar la arquitectura y el código sin exponer datos sensibles.*
+versión saneada para mostrar la arquitectura y el código sin exponer datos sensibles ni
+depender de un backend.*
