@@ -20,6 +20,7 @@ export const Route = createFileRoute("/_app/reservations")({
 function ReservationsPage() {
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
@@ -64,7 +65,7 @@ function ReservationsPage() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold tracking-tight">Reservas</h1>
-        <Button onClick={() => setOpen(true)}><Plus className="mr-2 h-4 w-4" /> Nueva</Button>
+        <Button onClick={() => { setEditId(undefined); setOpen(true); }}><Plus className="mr-2 h-4 w-4" /> Nueva</Button>
       </div>
 
       <div className="flex gap-2 flex-wrap">
@@ -100,7 +101,10 @@ function ReservationsPage() {
                   const extraItems = (r as { reservation_extras?: ReservationExtraItem[] }).reservation_extras;
                   return (
                     <Fragment key={r.id}>
-                    <tr className="border-b last:border-0 hover:bg-muted/30">
+                    <tr
+                      className="border-b last:border-0 hover:bg-muted/30 cursor-pointer"
+                      onClick={() => { setEditId(r.id); setOpen(true); }}
+                    >
                       <td className="p-2">
                         <div>{s.toLocaleDateString("es-ES")}</div>
                         <div className="text-xs text-muted-foreground font-mono">
@@ -132,7 +136,7 @@ function ReservationsPage() {
                       <td className="p-2 text-right font-medium tabular-nums">{eur(Number(r.total))}</td>
                       <td className="p-2 text-right">
                         {r.status !== "cancelled" && r.status !== "completed" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => cancel.mutate(r.id)} title="Cancelar">
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); cancel.mutate(r.id); }} title="Cancelar">
                             <X className="h-4 w-4" />
                           </Button>
                         )}
@@ -157,7 +161,11 @@ function ReservationsPage() {
         </CardContent>
       </Card>
 
-      <NewReservationDialog open={open} onOpenChange={setOpen} />
+      <NewReservationDialog
+        open={open}
+        onOpenChange={(o) => { setOpen(o); if (!o) setEditId(undefined); }}
+        editReservationId={editId}
+      />
     </div>
   );
 }

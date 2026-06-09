@@ -104,6 +104,41 @@ function resolveEmbeds(table: string, row: Row, select: string): Row {
   return out;
 }
 
+// ── Cleaning-buffer conflict check ───────────────────────────────────────────
+// Mirrors the Postgres `check_reservation_gap` trigger: a reservation occupies
+// its room for [start_at, end_at + cleaning_minutes). A new/edited reservation
+// conflicts with an existing *blocking* reservation when those windows overlap.
+// Cancelled/no-show/rejected never block, and `manual_override` (admin) skips
+// the check entirely — exactly like the real database trigger.
+function occupiedWindow(r: Row): [number, number] {
+  const start = new Date(r.start_at as string).getTime();
+  const end = new Date(r.end_at as string).getTime();
+  const cleaning = Math.max(0, Number(r.cleaning_minutes ?? 15)) * 60_000;
+  return [start, end + cleaning];
+}
+
+function checkReservationGap(candidate: Row): string | null {
+  const status = candidate.status as string;
+  if (status === "cancelled" || status === "no_show" || status === "rejected") return null;
+  if (candidate.manual_override) return null; // admin override skips the gap
+  const [aStart, aEnd] = occupiedWindow(candidate);
+  const sixtyMinAgo = Date.now() - 60 * 60_000;
+  for (const r of db().reservations ?? []) {
+    if (r.id === candidate.id) continue;
+    if (r.room_id !== candidate.room_id) continue;
+    const blocking =
+      r.status === "confirmed" || r.status === "in_progress" || r.status === "completed" ||
+      (r.status === "pending" && new Date(r.created_at as string).getTime() > sixtyMinAgo);
+    if (!blocking) continue;
+    const [bStart, bEnd] = occupiedWindow(r);
+    if (aStart < bEnd && bStart < aEnd) {
+      const mins = Math.max(15, Number(candidate.cleaning_minutes ?? 15));
+      return `Conflicto de reserva: la habitación necesita al menos ${mins} minutos de limpieza entre reservas`;
+    }
+  }
+  return null;
+}
+
 // ── Query builder ──────────────────────────────────────────────────────────────
 type Result = { data: unknown; error: unknown; count: number | null };
 
@@ -155,7 +190,10 @@ class QueryBuilder implements PromiseLike<Result> {
     const now = new Date().toISOString();
     const r: Row = { created_at: now, ...record };
     if (r.id == null) r.id = uid(this.table);
-    if (this.table === "reservations") r.updated_at = now;
+    if (this.table === "reservations") {
+      r.updated_at = now;
+      if (r.cleaning_minutes == null) r.cleaning_minutes = 15;
+    }
     return r;
   }
 
@@ -166,6 +204,12 @@ class QueryBuilder implements PromiseLike<Result> {
     if (this.op === "insert") {
       const arr = Array.isArray(this.payload) ? this.payload : [this.payload];
       const inserted = (arr as Row[]).map((p) => this.withDefaults(p));
+      if (table === "reservations") {
+        for (const row of inserted) {
+          const gap = checkReservationGap(row);
+          if (gap) return { data: null, error: { message: gap }, count: null };
+        }
+      }
       store.push(...inserted);
       persist();
       if (table === "reservations") inserted.forEach((row) => emitChange(table, row));
@@ -177,6 +221,12 @@ class QueryBuilder implements PromiseLike<Result> {
     if (this.op === "update") {
       const targets = applyFilters(store, this.filters);
       const patch = this.payload as Row;
+      if (table === "reservations") {
+        for (const row of targets) {
+          const gap = checkReservationGap({ ...row, ...patch });
+          if (gap) return { data: null, error: { message: gap }, count: null };
+        }
+      }
       for (const row of targets) {
         Object.assign(row, patch);
         if (table === "reservations") row.updated_at = new Date().toISOString();
@@ -367,6 +417,46 @@ async function rpc(fn: string, args: Record<string, unknown> = {}): Promise<{ da
     }
     return { data: customer.id, error: null };
   }
+
+  if (fn === "extend_cleaning_and_shift") {
+    // Extend a reservation's cleaning time and push the following reservations
+    // in the same room forward so they only start once cleaning has finished.
+    // Returns how many subsequent reservations were rescheduled. Mirrors the
+    // SECURITY DEFINER Postgres function (applies shifts directly, bypassing the
+    // gap trigger to avoid transient overlaps).
+    const a = db().reservations.find((r) => r.id === args.p_reservation_id);
+    if (!a) return { data: null, error: { message: "Reserva no encontrada" } };
+    const newClean = Math.max(15, Number(args.p_cleaning_minutes ?? 15));
+
+    const subsequent = db()
+      .reservations.filter(
+        (r) =>
+          r.room_id === a.room_id &&
+          r.id !== a.id &&
+          new Date(r.start_at as string).getTime() >= new Date(a.start_at as string).getTime() &&
+          ["confirmed", "in_progress", "completed", "pending"].includes(r.status as string),
+      )
+      .sort((x, y) => new Date(x.start_at as string).getTime() - new Date(y.start_at as string).getTime());
+
+    let reqTime = new Date(a.end_at as string).getTime() + newClean * 60_000;
+    let moved = 0;
+    for (const r of subsequent) {
+      if (new Date(r.start_at as string).getTime() >= reqTime) break; // gap absorbs the delay
+      const dur = new Date(r.end_at as string).getTime() - new Date(r.start_at as string).getTime();
+      const now = new Date().toISOString();
+      r.start_at = new Date(reqTime).toISOString();
+      r.end_at = new Date(reqTime + dur).toISOString();
+      r.updated_at = now;
+      reqTime = reqTime + dur + Math.max(0, Number(r.cleaning_minutes ?? 15)) * 60_000;
+      moved += 1;
+    }
+
+    a.cleaning_minutes = newClean;
+    a.updated_at = new Date().toISOString();
+    persist();
+    return { data: moved, error: null };
+  }
+
   return { data: null, error: null };
 }
 

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { format } from "date-fns";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,18 +25,23 @@ interface Props {
   defaultRoomId?: string;
   mode?: "standard" | "admin" | "public";
   onPublicCreated?: (reservationId: string) => void;
+  /** When set, the dialog edits this existing reservation instead of creating one. */
+  editReservationId?: string;
 }
 
-export function NewReservationDialog({ open, onOpenChange, defaultStart, defaultRoomId, mode = "standard", onPublicCreated }: Props) {
+export function NewReservationDialog({ open, onOpenChange, defaultStart, defaultRoomId, mode = "standard", onPublicCreated, editReservationId }: Props) {
   const isAdmin = mode === "admin";
   const isPublic = mode === "public";
+  const isEdit = !!editReservationId;
   const qc = useQueryClient();
   const { data: rooms } = useRooms();
   const { data: extras } = useExtras();
 
   const timeOptions = useMemo(() => {
     const opts: { value: string; label: string }[] = [];
-    const startMin = isAdmin ? 0 : 22 * 60;
+    // Only the public booking flow is limited to 22:00–24:00; staff (reception
+    // and admin) can pick any hour.
+    const startMin = isPublic ? 22 * 60 : 0;
     const endMin = 24 * 60;
     for (let minutes = startMin; minutes < endMin; minutes += 15) {
       const hh = String(Math.floor(minutes / 60)).padStart(2, "0");
@@ -45,11 +50,11 @@ export function NewReservationDialog({ open, onOpenChange, defaultStart, default
       opts.push({ value, label: value });
     }
     return opts;
-  }, [isAdmin]);
+  }, [isPublic]);
 
   const clampStartTimeToAllowed = (value: string) => {
     if (!value) return value;
-    if (isAdmin) return value; // admin: free hours
+    if (!isPublic) return value; // staff: free hours
     const [hhRaw, mmRaw] = value.split(":");
     const hh = Number(hhRaw);
     const mm = Number(mmRaw);
@@ -80,6 +85,7 @@ export function NewReservationDialog({ open, onOpenChange, defaultStart, default
   const [date, setDate] = useState<string>("");
   const [time, setTime] = useState<string>("");
   const [duration, setDuration] = useState<number>(120);
+  const [cleaningMinutes, setCleaningMinutes] = useState<number>(15);
   const [isOvernight, setIsOvernight] = useState(false);
   const [roomId, setRoomId] = useState<string>("");
   const [withJacuzzi, setWithJacuzzi] = useState(false);
@@ -93,14 +99,17 @@ export function NewReservationDialog({ open, onOpenChange, defaultStart, default
   const [breakdown, setBreakdown] = useState<PriceBreakdown | null>(null);
   const [overrideTotal, setOverrideTotal] = useState<string>("");
   const [overrideEnd, setOverrideEnd] = useState<string>(""); // datetime-local for admin
+  const [loadedCustomerId, setLoadedCustomerId] = useState<string | null>(null); // edit mode
 
   useEffect(() => {
     if (!open) return;
+    if (editReservationId) return; // edit mode populates from the existing reservation
     const d = defaultStart ?? new Date();
 setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2, "0");
     const mm = String(Math.floor(d.getMinutes() / 15) * 15).padStart(2, "0");
     setTime(clampStartTimeToAllowed(`${hh}:${mm}`));
     setDuration(120);
+    setCleaningMinutes(15);
     setIsOvernight(false);
     setRoomId(defaultRoomId ?? "");
     setWithJacuzzi(false);
@@ -114,7 +123,48 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
     setBreakdown(null);
     setOverrideTotal("");
     setOverrideEnd("");
-  }, [open, defaultStart, defaultRoomId]);
+    setLoadedCustomerId(null);
+  }, [open, defaultStart, defaultRoomId, editReservationId]);
+
+  // Edit mode: load the existing reservation + its extras and prefill the form.
+  useEffect(() => {
+    if (!open || !editReservationId) return;
+    let cancel = false;
+    (async () => {
+      const { data: r, error } = await supabase
+        .from("reservations")
+        .select("*, customers(name,phone,email), reservation_extras(extra_id,qty,unit_price,is_gift)")
+        .eq("id", editReservationId)
+        .single();
+      if (error || !r || cancel) return;
+      const s = new Date(r.start_at);
+      const e = new Date(r.end_at);
+      setDate(format(s, "yyyy-MM-dd"));
+      setTime(`${String(s.getHours()).padStart(2, "0")}:${String(s.getMinutes()).padStart(2, "0")}`);
+      setIsOvernight(!!r.is_overnight);
+      setDuration(Math.max(60, Math.round((e.getTime() - s.getTime()) / 60000)));
+      setCleaningMinutes(Math.max(15, r.cleaning_minutes ?? 15));
+      setRoomId(r.room_id);
+      setWithJacuzzi(!!r.with_jacuzzi);
+      setPeople(r.people ?? 2);
+      setLoadedCustomerId(r.customer_id ?? null);
+      const cust = Array.isArray(r.customers) ? r.customers[0] : r.customers;
+      setCustomerName(cust?.name ?? "");
+      setCustomerPhone(cust?.phone ?? "");
+      setCustomerEmail(cust?.email ?? "");
+      setNotes(r.internal_notes ?? "");
+      const qty: Record<string, number> = {};
+      const price: Record<string, string> = {};
+      for (const row of (r.reservation_extras ?? []) as { extra_id: string; qty: number; unit_price: number; is_gift: boolean }[]) {
+        if (row.is_gift) continue; // gifts are re-applied automatically by pricing
+        qty[row.extra_id] = row.qty;
+        price[row.extra_id] = Number(row.unit_price).toFixed(2).replace(".", ",");
+      }
+      setExtraQty(qty);
+      setExtraPrice(price);
+    })();
+    return () => { cancel = true; };
+  }, [open, editReservationId]);
 
   const startAt = useMemo(() => (date && time ? new Date(`${date}T${time}:00`) : null), [date, time]);
   const overnightAllowed = startAt ? isOvernightAllowed(startAt) : false;
@@ -130,15 +180,15 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
   }, [duration]);
 
   useEffect(() => {
-    if (isAdmin) return;
+    if (!isPublic) return;
     if (!overnightAllowed && isOvernight) setIsOvernight(false);
-  }, [overnightAllowed, isOvernight, isAdmin]);
+  }, [overnightAllowed, isOvernight, isPublic]);
 
   useEffect(() => {
-    if (isAdmin) return;
+    if (!isPublic) return;
     if (!isOvernight) return;
     if (time !== "22:00") setTime("22:00");
-  }, [isOvernight, time]);
+  }, [isOvernight, time, isPublic]);
 
   const room = useMemo(() => rooms?.find((r) => r.id === roomId), [rooms, roomId]);
   const rateGroupId = room?.rate_group_id ?? null;
@@ -196,7 +246,7 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       if (!startAt || !roomId) throw new Error("Datos incompletos");
       if (!isAdmin && !rateGroupId) throw new Error("Datos incompletos");
       if (!isAdmin && !breakdown) throw new Error("Datos incompletos");
-      if (!isAdmin && !isOvernightAllowed(startAt)) {
+      if (isPublic && !isOvernightAllowed(startAt)) {
         throw new Error(
           "Las reservas para jueves, viernes y sábado deben realizarse por teléfono o WhatsApp."
         );
@@ -207,9 +257,15 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
         throw new Error("Nombre y email son obligatorios");
       }
 
-      // Customer (find by phone or create)
-      let customerId: string | null = null;
-      if (customerPhone || customerName || customerEmail) {
+      // Customer. In edit mode, update the already-linked customer in place;
+      // otherwise find by phone/email or create.
+      let customerId: string | null = isEdit ? loadedCustomerId : null;
+      if (isEdit && loadedCustomerId) {
+        await supabase
+          .from("customers")
+          .update({ name: customerName || null, phone: customerPhone || null, email: customerEmail || null })
+          .eq("id", loadedCustomerId);
+      } else if (customerPhone || customerName || customerEmail) {
         if (customerPhone) {
           const { data: existing } = await supabase
             .from("customers")
@@ -255,33 +311,52 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       const useOverride = isAdmin && Number.isFinite(overrideNum);
       const finalTotal = useOverride ? overrideNum : (breakdown?.total ?? 0);
 
-      const { data: reservation, error } = await supabase
-        .from("reservations")
-        .insert({
-          room_id: roomId,
-          customer_id: customerId,
-          start_at: startAt.toISOString(),
-          end_at: endAt.toISOString(),
-          with_jacuzzi: withJacuzzi,
-          people,
-          is_overnight: isOvernight,
-          base_price: useOverride ? finalTotal : (breakdown?.base ?? 0),
-          third_person_surcharge: breakdown?.thirdPerson ?? 0,
-          dynamic_surcharge: breakdown?.dynamicSurcharge ?? 0,
-          dynamic_reason: useOverride ? "Precio manual (admin)" : (breakdown?.dynamicReason ?? null),
-          extras_total: breakdown?.extrasTotal ?? 0,
-          total: finalTotal,
-          internal_notes: notes || null,
-          manual_override: isAdmin,
-          created_by_role: isAdmin ? "admin" : isPublic ? "public" : "reception",
-        })
-        .select("id")
-        .single();
-      if (error) throw error;
+      const reservationFields = {
+        room_id: roomId,
+        customer_id: customerId,
+        start_at: startAt.toISOString(),
+        end_at: endAt.toISOString(),
+        with_jacuzzi: withJacuzzi,
+        people,
+        is_overnight: isOvernight,
+        base_price: useOverride ? finalTotal : (breakdown?.base ?? 0),
+        third_person_surcharge: breakdown?.thirdPerson ?? 0,
+        dynamic_surcharge: breakdown?.dynamicSurcharge ?? 0,
+        dynamic_reason: useOverride ? "Precio manual (admin)" : (breakdown?.dynamicReason ?? null),
+        extras_total: breakdown?.extrasTotal ?? 0,
+        total: finalTotal,
+        internal_notes: notes || null,
+        cleaning_minutes: Math.max(15, cleaningMinutes || 15),
+      };
+
+      let reservationId: string;
+      if (isEdit && editReservationId) {
+        // Update existing reservation (preserve manual_override / created_by_role).
+        const { error: upErr } = await supabase
+          .from("reservations")
+          .update(reservationFields)
+          .eq("id", editReservationId);
+        if (upErr) throw upErr;
+        reservationId = editReservationId;
+        // Replace the extras with the current selection.
+        await supabase.from("reservation_extras").delete().eq("reservation_id", reservationId);
+      } else {
+        const { data: reservation, error } = await supabase
+          .from("reservations")
+          .insert({
+            ...reservationFields,
+            manual_override: isAdmin,
+            created_by_role: isAdmin ? "admin" : isPublic ? "public" : "reception",
+          })
+          .select("id")
+          .single();
+        if (error) throw error;
+        reservationId = reservation.id;
+      }
 
       // Insert extras
       const rows = selectedExtras.map((e) => ({
-        reservation_id: reservation.id,
+        reservation_id: reservationId,
         extra_id: e.extraId,
         qty: e.qty,
         unit_price: e.price,
@@ -290,7 +365,7 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       if (breakdown) {
         for (const giftId of breakdown.giftedExtraIds) {
           if (!rows.some((r) => r.extra_id === giftId)) {
-            rows.push({ reservation_id: reservation.id, extra_id: giftId, qty: 1, unit_price: 0, is_gift: true });
+            rows.push({ reservation_id: reservationId, extra_id: giftId, qty: 1, unit_price: 0, is_gift: true });
           }
         }
       }
@@ -300,20 +375,20 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       }
 
       // Trigger confirmation email when public booking with email
-      if (isPublic && customerEmail) {
+      if (isPublic && !isEdit && customerEmail) {
         try {
           await supabase.functions.invoke("send-reservation-confirmation", {
-            body: { reservation_id: reservation.id },
+            body: { reservation_id: reservationId },
           });
         } catch (e) {
           console.warn("email send failed", e);
         }
       }
 
-      return reservation.id;
+      return reservationId;
     },
     onSuccess: (id) => {
-      toast.success(isPublic ? "¡Reserva confirmada! Te hemos enviado un email." : "Reserva creada");
+      toast.success(isEdit ? "Reserva actualizada" : isPublic ? "¡Reserva confirmada! Te hemos enviado un email." : "Reserva creada");
       qc.invalidateQueries({ queryKey: ["reservations"] });
       onOpenChange(false);
       if (isPublic) onPublicCreated?.(id);
@@ -341,7 +416,7 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-hidden flex flex-col min-h-0">
         <DialogHeader>
           <div className="flex items-start justify-between gap-4">
-            <DialogTitle>{isAdmin ? "Reserva manual (admin)" : isPublic ? "Reserva tu habitación" : "Nueva reserva"}</DialogTitle>
+            <DialogTitle>{isEdit ? "Editar reserva" : isAdmin ? "Reserva manual (admin)" : isPublic ? "Reserva tu habitación" : "Nueva reserva"}</DialogTitle>
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Total</div>
               <div className="text-lg font-semibold tabular-nums">{breakdown ? eur(breakdown.total) : "—"}</div>
@@ -350,6 +425,31 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
         </DialogHeader>
 
         <div className="flex-1 min-h-0 overflow-y-auto -mx-6 px-6">
+          {isAdmin && (
+            <div className="mb-4 space-y-2 rounded-md border border-amber-500/50 bg-amber-500/10 p-3">
+              <div className="text-sm font-semibold text-amber-700 dark:text-amber-400">Override admin</div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Fin reserva (opcional)</Label>
+                  <Input
+                    type="datetime-local"
+                    value={overrideEnd}
+                    onChange={(e) => setOverrideEnd(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Total final € (opcional)</Label>
+                  <Input
+                    inputMode="decimal"
+                    placeholder="Calculado automáticamente"
+                    value={overrideTotal}
+                    onChange={(e) => setOverrideTotal(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="text-[10px] text-muted-foreground">Esta reserva se marca como manual y se salta la separación de limpieza entre reservas.</div>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left col: when + room */}
             <div className="space-y-4">
@@ -397,7 +497,7 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
                     {overnightAllowed ? "Disponible (dom-mié) · 22:00–10:00" : "Solo dom-mié · 22:00–10:00"}
                   </div>
                 </div>
-                <Switch checked={isOvernight} onCheckedChange={setOvernightChecked} disabled={!isAdmin && !overnightAllowed} />
+                <Switch checked={isOvernight} onCheckedChange={setOvernightChecked} disabled={isPublic && !overnightAllowed} />
               </div>
 
               {isOvernight ? (
@@ -416,6 +516,22 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
                       ))}
                     </SelectContent>
                   </Select>
+                </div>
+              )}
+
+              {!isPublic && (
+                <div className="space-y-1.5">
+                  <Label>Limpieza tras la reserva (min)</Label>
+                  <Input
+                    type="number"
+                    min={15}
+                    step={5}
+                    value={cleaningMinutes}
+                    onChange={(e) => setCleaningMinutes(Math.max(15, Number(e.target.value) || 15))}
+                  />
+                  <div className="text-[10px] text-muted-foreground">
+                    Mínimo 15 min. La habitación queda no reservable durante este tiempo; amplíalo si necesita más limpieza.
+                  </div>
                 </div>
               )}
 
@@ -444,30 +560,6 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
                       <SelectItem value="4">4</SelectItem>
                     </SelectContent>
                   </Select>
-                </div>
-              )}
-
-              {isAdmin && (
-                <div className="space-y-2 rounded-md border border-amber-500/40 bg-amber-500/5 p-3">
-                  <div className="text-xs font-semibold text-amber-700 dark:text-amber-400">Override admin</div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Fin reserva (opcional)</Label>
-                    <Input
-                      type="datetime-local"
-                      value={overrideEnd}
-                      onChange={(e) => setOverrideEnd(e.target.value)}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">Total final € (opcional)</Label>
-                    <Input
-                      inputMode="decimal"
-                      placeholder="Calculado automáticamente"
-                      value={overrideTotal}
-                      onChange={(e) => setOverrideTotal(e.target.value)}
-                    />
-                  </div>
-                  <div className="text-[10px] text-muted-foreground">Esta reserva se marca como manual y se salta la separación de 15 min.</div>
                 </div>
               )}
 
@@ -575,21 +667,23 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
         </div>
 
         <div className="px-6 pb-3">
-          <div className="rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-            <div className="font-semibold text-foreground mb-1">CONDICIONES GENERALES</div>
-            <ul className="list-disc pl-4 space-y-0.5">
+          <details className="rounded-lg border bg-muted/20 text-xs text-muted-foreground">
+            <summary className="cursor-pointer select-none px-3 py-2 font-semibold text-foreground">
+              Condiciones generales
+            </summary>
+            <ul className="list-disc pl-7 pr-3 pb-3 space-y-0.5">
               <li>Todos los extras están sujetos a disponibilidad</li>
               <li>Algunos servicios requieren reserva previa</li>
               <li>Los precios pueden variar en función de la demanda</li>
               <li>Se recomienda consultar antes de la reserva para confirmar disponibilidad</li>
             </ul>
-          </div>
+          </details>
         </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
           <Button onClick={() => create.mutate()} disabled={!roomId || !startAt || create.isPending}>
-            {create.isPending ? "Creando..." : "Crear reserva"}
+            {create.isPending ? "Guardando..." : isEdit ? "Guardar cambios" : "Crear reserva"}
           </Button>
         </DialogFooter>
       </DialogContent>

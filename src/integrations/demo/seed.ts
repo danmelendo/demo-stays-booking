@@ -12,7 +12,7 @@ export type Row = Record<string, any>;
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 4; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 5; // bump to force a reseed when the shape changes
 
 export const DEMO_USER_ID = "demo-user-admin";
 
@@ -137,7 +137,7 @@ function buildReservations(now: Date) {
   const defs: Array<{
     id: string; room_id: string; customer_id: string | null;
     start: Date; end: Date; status: string; total: number; base: number;
-    role: string; overnight?: boolean; people?: number; deposit_paid?: boolean;
+    role: string; overnight?: boolean; people?: number; deposit_paid?: boolean; cleaning?: number;
     extras?: { extra_id: string; qty: number; unit_price: number; is_gift?: boolean; bed_message?: string | null; screen_message?: string | null }[];
   }> = [
     {
@@ -148,7 +148,7 @@ function buildReservations(now: Date) {
     {
       id: "res-2", room_id: "room-norte-ritmo", customer_id: "cust-2",
       start: at(now, 0, 20, 30), end: at(now, 0, 22, 30), status: "in_progress",
-      total: 87, base: 62, role: "public", deposit_paid: true,
+      total: 87, base: 62, role: "public", deposit_paid: true, cleaning: 30,
       extras: [{ extra_id: "ex-cava", qty: 1, unit_price: 25 }],
     },
     {
@@ -201,6 +201,7 @@ function buildReservations(now: Date) {
       with_jacuzzi: true,
       people: d.people ?? 2,
       is_overnight: !!d.overnight,
+      cleaning_minutes: d.cleaning ?? 15,
       base_price: d.base,
       third_person_surcharge: 0,
       dynamic_surcharge: 0,

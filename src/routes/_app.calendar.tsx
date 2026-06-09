@@ -24,6 +24,7 @@ function CalendarPage() {
     return d;
   });
   const [open, setOpen] = useState(false);
+  const [editId, setEditId] = useState<string | undefined>(undefined);
   const [defaults, setDefaults] = useState<{ start?: Date; roomId?: string }>({});
 
   const dayEnd = new Date(day);
@@ -60,7 +61,7 @@ function CalendarPage() {
             {day.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
           </h1>
         </div>
-        <Button onClick={() => { setDefaults({ start: day }); setOpen(true); }}>
+        <Button onClick={() => { setEditId(undefined); setDefaults({ start: day }); setOpen(true); }}>
           <Plus className="mr-2 h-4 w-4" /> Nueva reserva
         </Button>
       </div>
@@ -101,6 +102,7 @@ function CalendarPage() {
                     const minutes = Math.floor((y / HOUR_HEIGHT) * 60 / 15) * 15;
                     const start = new Date(day);
                     start.setMinutes(minutes);
+                    setEditId(undefined);
                     setDefaults({ start, roomId: room.id });
                     setOpen(true);
                   }}
@@ -124,9 +126,9 @@ function CalendarPage() {
                       return (
                         <div
                           key={r.id}
-                          className={`absolute left-1 right-1 rounded border px-1.5 py-1 text-[10px] overflow-hidden ${STATUS_COLORS[r.status]}`}
+                          className={`absolute left-1 right-1 rounded border px-1.5 py-1 text-[10px] overflow-hidden cursor-pointer ${STATUS_COLORS[r.status]}`}
                           style={{ top, height }}
-                          onClick={(e) => e.stopPropagation()}
+                          onClick={(ev) => { ev.stopPropagation(); setEditId(r.id); setDefaults({}); setOpen(true); }}
                           title={`${r.customers?.name ?? "Sin nombre"} · ${s.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}–${e.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}`}
                         >
                           <div className="font-medium truncate">
@@ -143,7 +145,13 @@ function CalendarPage() {
         </CardContent>
       </Card>
 
-      <NewReservationDialog open={open} onOpenChange={setOpen} defaultStart={defaults.start} defaultRoomId={defaults.roomId} />
+      <NewReservationDialog
+        open={open}
+        onOpenChange={(o) => { setOpen(o); if (!o) setEditId(undefined); }}
+        defaultStart={defaults.start}
+        defaultRoomId={defaults.roomId}
+        editReservationId={editId}
+      />
     </div>
   );
 }

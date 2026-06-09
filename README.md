@@ -67,6 +67,13 @@ Datos y cambios se guardan en tu navegador; usa **«Reiniciar datos»** del avis
 
 **Panel interno de recepción** (`/_app/*`)
 - Calendario y agenda del día, gestión de reservas, clientes y tarifas.
+- **Crear y editar reservas** desde el calendario o el listado (clic en una reserva para editarla).
+- **Separación de limpieza entre reservas:** cada reserva bloquea la habitación un tiempo de
+  limpieza (mín. 15 min) tras su fin; el sistema impide solapamientos respetando ese margen.
+- **Ampliar limpieza y desplazar:** si una habitación necesita más limpieza, recepción la amplía
+  y las reservas posteriores se **reprograman automáticamente** hasta que termine.
+- Recepción/administración **sin restricción de horario** (cualquier hora); la limitación de
+  franja sólo aplica al portal público.
 - Roles (administrador / recepción) con control de acceso.
 - Catálogo de extras y tarifas editable.
 - Notificaciones en tiempo real al entrar nuevas reservas.
@@ -106,6 +113,10 @@ Aspectos destacables a nivel de ingeniería:
   crear reservas, no leer datos de otros.
 - **Capa de datos desacoplada:** la app consume un único cliente (`@/integrations/supabase/client`)
   y todo el resto del código es agnóstico a si detrás hay Supabase real o el mock de la demo.
+
+> 📐 **Lo que la demo no muestra está en [`ARCHITECTURE.md`](ARCHITECTURE.md):** modelo de datos
+> (13 tablas), seguridad RLS, motor de precios dinámico y qué sustituye exactamente el mock —es
+> decir, dónde está el grueso de la ingeniería que el navegador no necesita para la demo.
 
 ## 🔌 Versión de producción
 
