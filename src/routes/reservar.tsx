@@ -15,11 +15,12 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Bath, Droplet, Users, CalendarIcon, Sparkles,
   ShieldCheck, CheckCircle2, CreditCard, Plus, Minus, Gift,
-  Phone, ChevronRight, Tv, Moon, Clock, Star, Flame, MapPin, Globe,
+  Phone, ChevronRight, Tv, Moon, Clock, Star, Flame, MapPin, Globe, BedDouble,
 } from "lucide-react";
 import { toast } from "sonner";
-import { calculatePrice, type PriceBreakdown } from "@/lib/pricing";
+import { calculatePrice, calculateNightlyPrice, type PriceBreakdown } from "@/lib/pricing";
 import { DURATIONS, DURATION_LABELS, eur, isOvernightAllowed } from "@/lib/data";
+import { useBookingMode, NIGHTLY_CHECKIN_HOUR, NIGHTLY_CHECKOUT_HOUR, type BookingMode } from "@/lib/booking-mode";
 
 // Placeholder images for fallback
 import extraChampagne from "@/assets/extra-champagne.jpg";
@@ -260,7 +261,34 @@ const CSS = `
     display: flex; align-items: center; gap: 8px;
     color: rgba(255,255,255,0.6); font-size: 13px;
   }
-  .ds-help a { color: var(--gold-light); text-decoration: none; font-weight: 500; }
+  .ds-help a { color: var(--gold-light); text-decoration: none; font-weight: 500; white-space: nowrap; }
+  @media (max-width: 1040px) { .ds-help span { display: none; } }
+
+  /* Booking-mode toggle (hourly vs traditional hotel) */
+  .ds-mode-toggle {
+    display: flex; align-items: center; gap: 2px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--gold-dark);
+    border-radius: 9px;
+    padding: 3px;
+    flex-shrink: 0;
+  }
+  .ds-mode-btn {
+    display: flex; align-items: center; gap: 6px;
+    background: none; border: none; cursor: pointer;
+    color: rgba(255,255,255,0.55);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 12px; font-weight: 500; letter-spacing: 0.03em;
+    padding: 6px 12px; border-radius: 7px;
+    transition: background 0.15s, color 0.15s;
+    white-space: nowrap;
+  }
+  .ds-mode-btn:hover { color: var(--gold-light); }
+  .ds-mode-btn.active { background: var(--gold); color: var(--ink); }
+  @media (max-width: 860px) {
+    .ds-mode-btn span { display: none; }
+    .ds-mode-btn { padding: 6px 9px; }
+  }
 
   /* Age banner */
   .ds-age-banner {
@@ -757,6 +785,10 @@ const CSS = `
 function PublicReservePage() {
   const [step, setStep] = useState<Step>("search");
 
+  // Booking mode: "hourly" (original product) vs "nightly" (traditional hotel)
+  const [mode, setMode] = useBookingMode();
+  const isNightly = mode === "nightly";
+
   // search
   const [date, setDate] = useState("");
   const [time, setTime] = useState("22:00");
@@ -764,6 +796,9 @@ function PublicReservePage() {
   const [isOvernight, setIsOvernight] = useState(false);
   const [people, setPeople] = useState(2);
   const [building, setBuilding] = useState("central");
+  // nightly-mode search (date range)
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
 
   // room
   const [room, setRoom] = useState<RoomLite | null>(null);
@@ -794,16 +829,42 @@ function PublicReservePage() {
   const handlingPop = useRef(false);
   const payingGuard = useRef(false);
 
-  const startAt = useMemo(() => (date && time ? new Date(`${date}T${time}:00`) : null), [date, time]);
+  const nights = useMemo(() => {
+    if (!checkIn || !checkOut) return 0;
+    const a = new Date(`${checkIn}T00:00:00`);
+    const b = new Date(`${checkOut}T00:00:00`);
+    return Math.max(0, Math.round((b.getTime() - a.getTime()) / 86_400_000));
+  }, [checkIn, checkOut]);
+
+  const startAt = useMemo(() => {
+    if (isNightly) {
+      return checkIn ? new Date(`${checkIn}T${String(NIGHTLY_CHECKIN_HOUR).padStart(2, "0")}:00:00`) : null;
+    }
+    return date && time ? new Date(`${date}T${time}:00`) : null;
+  }, [isNightly, checkIn, date, time]);
   const overnightAllowed = startAt ? isOvernightAllowed(startAt) : false;
 
   const endAt = useMemo(() => {
+    if (isNightly) {
+      return checkOut ? new Date(`${checkOut}T${String(NIGHTLY_CHECKOUT_HOUR).padStart(2, "0")}:00:00`) : null;
+    }
     if (!startAt) return null;
     const e = new Date(startAt);
     if (isOvernight) { e.setDate(e.getDate() + 1); e.setHours(10, 0, 0, 0); }
     else { e.setMinutes(e.getMinutes() + duration); }
     return e;
-  }, [startAt, isOvernight, duration]);
+  }, [isNightly, checkOut, startAt, isOvernight, duration]);
+
+  // Switching product mode restarts the flow (search state is mode-specific)
+  const switchMode = (m: BookingMode) => {
+    if (m === mode) return;
+    setMode(m);
+    setStep("search");
+    setRoom(null);
+    setBreakdown(null);
+    setDidSearch(false);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
 
   const pricingDuration = useMemo(() => {
     const c = Math.min(360, Math.max(60, duration));
@@ -861,6 +922,32 @@ function PublicReservePage() {
     return map;
   }, [rooms, rateHourly]);
 
+  const { data: rateNightly } = useQuery({
+    queryKey: ["public-rate-nightly"],
+    enabled: isNightly,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("rate_nightly").select("*");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const fromNightlyByRoom = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!rooms || !rateNightly) return map;
+    const byGroup = new Map<string, number>();
+    for (const r of rateNightly as { rate_group_id: string; price: number }[]) {
+      byGroup.set(r.rate_group_id, Number(r.price));
+    }
+    for (const room of rooms) {
+      if (room.rate_group_id) {
+        const p = byGroup.get(room.rate_group_id);
+        if (p !== undefined) map.set(room.id, p);
+      }
+    }
+    return map;
+  }, [rooms, rateNightly]);
+
   const { data: conflicts } = useQuery({
     queryKey: ["public-conflicts", startAt?.toISOString(), endAt?.toISOString()],
     enabled: !!startAt && !!endAt,
@@ -894,27 +981,45 @@ function PublicReservePage() {
         const ex = extras?.find(e => e.id === id);
         return { extraId: id, qty: q, price: Number(ex?.price ?? 0) };
       });
-    calculatePrice({
-      rateGroupId: room.rate_group_id,
-      durationMin: pricingDuration,
-      withJacuzzi: room.jacuzzi === "always" ? true : room.jacuzzi === "none" ? false : withJacuzzi,
-      isOvernight,
-      overnightCheckout: isOvernight ? "10:00:00" : undefined,
-      people,
-      startAt,
-      extras: selectedExtras,
-    })
+    const promise = isNightly
+      ? (!endAt || nights <= 0
+          ? Promise.resolve(null)
+          : calculateNightlyPrice({
+              rateGroupId: room.rate_group_id,
+              checkIn: startAt,
+              checkOut: endAt,
+              extras: selectedExtras,
+            }))
+      : calculatePrice({
+          rateGroupId: room.rate_group_id,
+          durationMin: pricingDuration,
+          withJacuzzi: room.jacuzzi === "always" ? true : room.jacuzzi === "none" ? false : withJacuzzi,
+          isOvernight,
+          overnightCheckout: isOvernight ? "10:00:00" : undefined,
+          people,
+          startAt,
+          extras: selectedExtras,
+        });
+    promise
       .then(b => { if (!cancel) setBreakdown(b); })
       .catch(() => { if (!cancel) setBreakdown(null); });
     return () => { cancel = true; };
-  }, [room, withJacuzzi, isOvernight, people, startAt, pricingDuration, extras, extraQty, step]);
+  }, [room, withJacuzzi, isOvernight, people, startAt, endAt, nights, isNightly, pricingDuration, extras, extraQty, step]);
 
   const goSearch = () => {
-    if (!date || !time) return toast.error("Selecciona fecha y hora");
+    if (isNightly) {
+      if (!checkIn || !checkOut) return toast.error("Selecciona llegada y salida");
+      if (nights <= 0) return toast.error("La salida debe ser posterior a la llegada");
+    } else if (!date || !time) {
+      return toast.error("Selecciona fecha y hora");
+    }
     setRoom(null);
     setStep("search");
     setDidSearch(true);
   };
+
+  // Whether the current mode's search inputs are complete (gates the rooms list)
+  const searchReady = isNightly ? !!checkIn && !!checkOut && nights > 0 : !!date;
 
   const availableRooms = useMemo(() => {
     if (!rooms) return [];
@@ -1010,7 +1115,7 @@ function PublicReservePage() {
         room_id: room.id, customer_id: customerId as unknown as string,
         start_at: startAt.toISOString(), end_at: endAt.toISOString(),
         with_jacuzzi: room.jacuzzi === "always" ? true : room.jacuzzi === "none" ? false : withJacuzzi,
-        people, is_overnight: isOvernight,
+        people, is_overnight: isNightly ? true : isOvernight,
         base_price: breakdown.base, third_person_surcharge: breakdown.thirdPerson,
         dynamic_surcharge: breakdown.dynamicSurcharge, dynamic_reason: breakdown.dynamicReason,
         extras_total: breakdown.extrasTotal, total,
@@ -1204,6 +1309,27 @@ function PublicReservePage() {
         <div className="ds-header-inner">
           <div className="ds-logo">Demo <span>Stays</span></div>
 
+          <div className="ds-mode-toggle" role="group" aria-label="Tipo de reserva">
+            <button
+              type="button"
+              className={`ds-mode-btn${!isNightly ? " active" : ""}`}
+              onClick={() => switchMode("hourly")}
+              title="Reserva por horas"
+            >
+              <Clock size={13} />
+              <span>Por horas</span>
+            </button>
+            <button
+              type="button"
+              className={`ds-mode-btn${isNightly ? " active" : ""}`}
+              onClick={() => switchMode("nightly")}
+              title="Hotel tradicional · estancias por noches"
+            >
+              <BedDouble size={13} />
+              <span>Hotel tradicional</span>
+            </button>
+          </div>
+
           {step !== "search" && step !== "done" && (
             <button className="ds-back" onClick={handleBack}>← Atrás</button>
           )}
@@ -1261,15 +1387,83 @@ function PublicReservePage() {
             <div className="ds-hero">
               <div className="ds-hero-eyebrow">
                 <Star size={12} />
-                Madrid · Habitaciones temáticas
+                {isNightly ? "Madrid · Hotel boutique" : "Madrid · Habitaciones temáticas"}
                 <Star size={12} />
               </div>
               <h1 className="ds-serif">Tu escapada <em>perfecta</em><br />empieza aquí</h1>
-              <p>Habitaciones únicas con jacuzzi en el centro de Madrid. Sin registro, con confirmación inmediata.</p>
+              <p>
+                {isNightly
+                  ? `Estancias por noches en el centro de Madrid. Check-in ${NIGHTLY_CHECKIN_HOUR}:00 · check-out ${NIGHTLY_CHECKOUT_HOUR}:00. Sin registro, con confirmación inmediata.`
+                  : "Habitaciones únicas con jacuzzi en el centro de Madrid. Sin registro, con confirmación inmediata."}
+              </p>
             </div>
 
             <div className="ds-search-card">
               <div className="ds-search-grid">
+                {isNightly && (
+                  <>
+                    <div className="ds-field">
+                      <label className="ds-label">Llegada</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" className="w-full justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                            {checkIn || <span className="text-muted-foreground">Fecha de llegada</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkIn ? new Date(`${checkIn}T00:00:00`) : undefined}
+                            onSelect={d => {
+                              const v = d ? format(d, "yyyy-MM-dd") : "";
+                              setCheckIn(v);
+                              if (v && checkOut && checkOut <= v) setCheckOut("");
+                            }}
+                            disabled={d => d < new Date(new Date().toDateString())}
+                            restrictContactDays={false}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <div style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 4 }}>
+                        Check-in a partir de las {NIGHTLY_CHECKIN_HOUR}:00
+                      </div>
+                    </div>
+
+                    <div className="ds-field">
+                      <label className="ds-label">Salida</label>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <Button type="button" variant="outline" className="w-full justify-start text-left font-normal">
+                            <CalendarIcon className="mr-2 h-4 w-4 opacity-50" />
+                            {checkOut || <span className="text-muted-foreground">Fecha de salida</span>}
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={checkOut ? new Date(`${checkOut}T00:00:00`) : undefined}
+                            onSelect={d => setCheckOut(d ? format(d, "yyyy-MM-dd") : "")}
+                            disabled={d => {
+                              const min = checkIn ? new Date(`${checkIn}T00:00:00`) : new Date(new Date().toDateString());
+                              return d <= min;
+                            }}
+                            restrictContactDays={false}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <div style={{ fontSize: 11, color: "var(--ink-soft)", marginTop: 4 }}>
+                        {nights > 0
+                          ? `${nights} ${nights === 1 ? "noche" : "noches"} · check-out ${NIGHTLY_CHECKOUT_HOUR}:00`
+                          : `Check-out hasta las ${NIGHTLY_CHECKOUT_HOUR}:00`}
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {!isNightly && (
                 <div className="ds-field">
                   <label className="ds-label">Fecha</label>
                   <Popover>
@@ -1291,6 +1485,7 @@ function PublicReservePage() {
                     </PopoverContent>
                   </Popover>
                 </div>
+                )}
 
                 <div className="ds-field">
                   <label className="ds-label" style={{ display: "flex", alignItems: "center", gap: 5 }}>
@@ -1313,6 +1508,7 @@ function PublicReservePage() {
                   )}
                 </div>
 
+                {!isNightly && (
                 <div className="ds-field">
                   <label className="ds-label">Hora de entrada</label>
                   <select
@@ -1338,7 +1534,9 @@ function PublicReservePage() {
                     }
                   </select>
                 </div>
+                )}
 
+                {!isNightly && (
                 <div className="ds-overnight-row">
                   <div>
                     <div className="ds-overnight-row-label">
@@ -1355,8 +1553,9 @@ function PublicReservePage() {
                     disabled={!overnightAllowed}
                   />
                 </div>
+                )}
 
-                {!isOvernight && (
+                {!isNightly && !isOvernight && (
                   <div className="ds-field">
                     <label className="ds-label">Duración</label>
                     <select
@@ -1383,7 +1582,7 @@ function PublicReservePage() {
                 <button
                   className="ds-btn-primary"
                   onClick={goSearch}
-                  disabled={!date || !time}
+                  disabled={isNightly ? !checkIn || !checkOut || nights <= 0 : !date || !time}
                 >
                   Ver habitaciones disponibles <ChevronRight size={16} />
                 </button>
@@ -1391,21 +1590,33 @@ function PublicReservePage() {
             </div>
 
             {/* Available rooms list (shown after date selected) */}
-            {date && availableRooms.length > 0 && (
+            {searchReady && availableRooms.length > 0 && (
               <div ref={roomsRef} style={{ marginTop: 40 }}>
                 <div className="ds-section-header">
                   <h2 className="ds-serif">Habitaciones disponibles</h2>
                   <p>
-                    {startAt?.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
-                    {" · "}{time}{" · "}
-                    {isOvernight ? "Noche completa" : DURATION_LABELS[pricingDuration]}
-                    {" · "}{people} {people === 1 ? "persona" : "personas"}
+                    {isNightly ? (
+                      <>
+                        {startAt?.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+                        {" → "}
+                        {endAt?.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+                        {" · "}{nights} {nights === 1 ? "noche" : "noches"}
+                        {" · "}{people} {people === 1 ? "persona" : "personas"}
+                      </>
+                    ) : (
+                      <>
+                        {startAt?.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+                        {" · "}{time}{" · "}
+                        {isOvernight ? "Noche completa" : DURATION_LABELS[pricingDuration]}
+                        {" · "}{people} {people === 1 ? "persona" : "personas"}
+                      </>
+                    )}
                   </p>
                 </div>
 
                 <div className="ds-rooms-list">
                   {availableRooms.map(r => {
-                    const fromPrice = fromPriceByRoom.get(r.id);
+                    const fromPrice = isNightly ? fromNightlyByRoom.get(r.id) : fromPriceByRoom.get(r.id);
                     const unavailable = conflicts?.has(r.id);
                     const isExpanded = expandedExtrasRoom === r.id;
                     const roomExtras = extras?.filter(e => e.category !== "services") ?? [];
@@ -1418,7 +1629,7 @@ function PublicReservePage() {
                             <div className="ds-unavailable-pill" style={{ flexDirection: "column", alignItems: "center", gap: 6, padding: "12px 20px", textAlign: "center" }}>
                               <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                                 <span style={{ fontSize: 16 }}>🔒</span>
-                                No disponible para este horario
+                                {isNightly ? "No disponible para estas fechas" : "No disponible para este horario"}
                               </div>
                               <div style={{ display: "flex", flexDirection: "column", gap: 2, fontSize: 12, opacity: 0.85 }}>
                                 {CONTACTS[building]?.phones.map((p, i) => (
@@ -1454,6 +1665,7 @@ function PublicReservePage() {
                                 <>
                                   <div className="ds-price-from">desde</div>
                                   <div className="ds-price-amount ds-serif">{eur(fromPrice)}</div>
+                                  {isNightly && <div className="ds-price-from" style={{ marginTop: 2 }}>por noche</div>}
                                 </>
                               ) : (
                                 <div style={{ fontSize: 13, color: "var(--ink-soft)" }}>Consultar</div>
@@ -1543,7 +1755,7 @@ function PublicReservePage() {
               </div>
             )}
 
-            {!date && (
+            {!searchReady && (
               <div className="ds-trust" style={{ marginTop: 40 }}>
                 <div className="ds-trust-item">
                   <div className="ds-trust-icon"><Clock size={22} color="var(--gold)" /></div>
@@ -1648,7 +1860,7 @@ function PublicReservePage() {
                 Continuar con mis datos <ChevronRight size={16} />
               </button>
             </div>
-            <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} breakdown={breakdown} />
+            <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} nights={isNightly ? nights : null} breakdown={breakdown} />
           </div>
         )}
 
@@ -1689,7 +1901,7 @@ function PublicReservePage() {
                 Continuar al pago <ChevronRight size={16} />
               </button>
             </div>
-            <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} breakdown={breakdown} />
+            <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} nights={isNightly ? nights : null} breakdown={breakdown} />
           </div>
         )}
 
@@ -1747,7 +1959,7 @@ function PublicReservePage() {
                 Pago seguro procesado por Redsys · Redirección al TPV de tu banco
               </p>
             </div>
-            <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} breakdown={breakdown} />
+            <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} nights={isNightly ? nights : null} breakdown={breakdown} />
           </div>
         )}
 
@@ -1800,7 +2012,7 @@ function PublicReservePage() {
 // Summary sidebar
 // ─────────────────────────────────────────────
 function SummaryBar({
-  room, startAt, endAt, people, isOvernight, duration, breakdown,
+  room, startAt, endAt, people, isOvernight, duration, nights, breakdown,
 }: {
   room: RoomLite;
   startAt: Date | null;
@@ -1808,6 +2020,7 @@ function SummaryBar({
   people: number;
   isOvernight: boolean;
   duration: number;
+  nights?: number | null; // set in traditional-hotel (nightly) mode
   breakdown: PriceBreakdown | null;
 }) {
   return (
@@ -1832,7 +2045,11 @@ function SummaryBar({
       </div>
       <div className="ds-summary-row">
         <span>Duración</span>
-        <span className="ds-summary-row-val">{isOvernight ? "Noche completa" : DURATION_LABELS[duration]}</span>
+        <span className="ds-summary-row-val">
+          {nights != null
+            ? `${nights} ${nights === 1 ? "noche" : "noches"}`
+            : isOvernight ? "Noche completa" : DURATION_LABELS[duration]}
+        </span>
       </div>
       <div className="ds-summary-row">
         <span>Personas</span>

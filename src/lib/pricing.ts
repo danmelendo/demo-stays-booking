@@ -136,6 +136,79 @@ export async function calculatePrice(input: PriceInput): Promise<PriceBreakdown>
   };
 }
 
+export interface NightlyPriceInput {
+  rateGroupId: string;
+  checkIn: Date; // first night
+  checkOut: Date; // departure day (not slept)
+  extras: { extraId: string; qty: number; price: number }[];
+}
+
+// Traditional-hotel mode: price a stay night by night. Fri/Sat nights use the
+// weekend price when defined; date-based dynamic rules surcharge each night
+// they cover. Gift thresholds work exactly like the hourly flow.
+export async function calculateNightlyPrice(input: NightlyPriceInput): Promise<PriceBreakdown> {
+  const { data: rate, error } = await supabase
+    .from("rate_nightly")
+    .select("price, weekend_price")
+    .eq("rate_group_id", input.rateGroupId)
+    .maybeSingle();
+  if (error) throw error;
+  const baseNight = Number(rate?.price ?? 0);
+  const weekendNight = rate?.weekend_price != null ? Number(rate.weekend_price) : baseNight;
+
+  const { data: rules, error: rulesError } = await supabase
+    .from("dynamic_rules")
+    .select("*")
+    .eq("active", true);
+  if (rulesError) throw rulesError;
+  const dateRules = (rules ?? []).filter((r) => r.type === "date");
+
+  let base = 0;
+  let dynamicSurcharge = 0;
+  const reasonHits = new Map<string, number>();
+  const night = new Date(input.checkIn);
+  night.setHours(0, 0, 0, 0);
+  const lastNight = new Date(input.checkOut);
+  lastNight.setHours(0, 0, 0, 0);
+  while (night < lastNight) {
+    const dow = night.getDay();
+    const nightPrice = dow === 5 || dow === 6 ? weekendNight : baseNight; // Fri/Sat
+    base += nightPrice;
+    const d = `${night.getFullYear()}-${String(night.getMonth() + 1).padStart(2, "0")}-${String(night.getDate()).padStart(2, "0")}`;
+    for (const r of dateRules) {
+      const cfg = r.config as { from?: string; to?: string };
+      if (!cfg.from || !cfg.to) continue;
+      if (d >= cfg.from && d <= cfg.to) {
+        const mult = Number(r.multiplier ?? 0);
+        dynamicSurcharge += nightPrice * (mult / 100);
+        reasonHits.set(`${r.name} (+${mult}%)`, (reasonHits.get(`${r.name} (+${mult}%)`) ?? 0) + 1);
+      }
+    }
+    night.setDate(night.getDate() + 1);
+  }
+  const dynamicReason = reasonHits.size ? [...reasonHits.keys()].join(" · ") : null;
+
+  const extrasTotal = input.extras.reduce((s, e) => s + e.qty * e.price, 0);
+  const { data: gifts, error: giftsError } = await supabase
+    .from("gift_thresholds")
+    .select("*")
+    .eq("active", true)
+    .lte("min_extras_total", extrasTotal)
+    .order("min_extras_total", { ascending: false });
+  if (giftsError) throw giftsError;
+  const giftedExtraIds: string[] = gifts ? gifts.map((g) => g.gift_extra_id) : [];
+
+  return {
+    base: round2(base),
+    thirdPerson: 0,
+    dynamicSurcharge: round2(dynamicSurcharge),
+    dynamicReason,
+    extrasTotal: round2(extrasTotal),
+    giftedExtraIds,
+    total: round2(base + dynamicSurcharge + extrasTotal),
+  };
+}
+
 export function round2(n: number) {
   return Math.round(n * 100) / 100;
 }

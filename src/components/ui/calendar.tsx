@@ -32,17 +32,21 @@ function Calendar({
   weekStartsOn,
   onDayClick,
   contactPhones,
+  restrictContactDays = true,
   ...props
 }: React.ComponentProps<typeof DayPicker> & {
   buttonVariant?: React.ComponentProps<typeof Button>["variant"];
   contactPhones?: { number: string; href?: string }[];
+  /** Thu/Fri/Sat are phone-only for the hourly product; pass false to allow
+   *  them (e.g. traditional-hotel mode, where weekend stays book online). */
+  restrictContactDays?: boolean;
 }) {
   const [showContactDialog, setShowContactDialog] = React.useState(false);
   const [activePhones, setActivePhones] = React.useState<{ number: string; href?: string }[]>([]);
 
   const defaultClassNames = getDefaultClassNames();
 
-  const isContactDay = (date: Date) => CONTACT_DAYS.includes(date.getDay());
+  const isContactDay = (date: Date) => restrictContactDays && CONTACT_DAYS.includes(date.getDay());
 
   const handleDayClick = (date: Date, modifiers: any, e: React.MouseEvent) => {
     if (isContactDay(date)) {
@@ -75,7 +79,7 @@ function Calendar({
       onDayClick={handleDayClick}
       onSelect={handleSelect}
       modifiers={{
-        contactRequired: (date) => CONTACT_DAYS.includes(date.getDay()),
+        contactRequired: (date) => restrictContactDays && CONTACT_DAYS.includes(date.getDay()),
       }}
       modifiersClassNames={{
         contactRequired: "opacity-70 cursor-pointer border border-dashed border-amber-400",

@@ -219,6 +219,35 @@ export type Database = {
           },
         ]
       }
+      rate_nightly: {
+        Row: {
+          id: string
+          price: number
+          rate_group_id: string
+          weekend_price: number | null
+        }
+        Insert: {
+          id?: string
+          price: number
+          rate_group_id: string
+          weekend_price?: number | null
+        }
+        Update: {
+          id?: string
+          price?: number
+          rate_group_id?: string
+          weekend_price?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_nightly_rate_group_id_fkey"
+            columns: ["rate_group_id"]
+            isOneToOne: false
+            referencedRelation: "rate_groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rate_overnight: {
         Row: {
           checkout_time: string

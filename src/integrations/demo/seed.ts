@@ -12,7 +12,7 @@ export type Row = Record<string, any>;
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 5; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 6; // bump to force a reseed when the shape changes
 
 export const DEMO_USER_ID = "demo-user-admin";
 
@@ -65,6 +65,19 @@ const OVERNIGHT: Record<string, [string, number][]> = {
   "rg-ruta66": [["10:00:00", 120], ["11:00:00", 130], ["12:00:00", 140]],
   "rg-music": [["10:00:00", 110], ["11:00:00", 120], ["12:00:00", 130]],
   "rg-dubai": [["10:00:00", 110], ["11:00:00", 120], ["12:00:00", 130]],
+};
+
+// ── Nightly rates (traditional-hotel mode) [price, weekend_price Fri/Sat] ──────
+// Used by the public portal's "Hotel tradicional" booking mode: full nights
+// with check-in 15:00 / check-out 12:00, priced per night.
+const NIGHTLY: Record<string, [number, number]> = {
+  "rg-grey": [135, 165],
+  "rg-ruta66": [120, 145],
+  "rg-music": [105, 128],
+  "rg-dubai": [110, 132],
+  "rg-hollywood": [95, 115],
+  "rg-maldivas": [85, 102],
+  "rg-tokyo": [75, 90],
 };
 
 // ── Third person surcharge (global, per extra person and time slot) ───────────
@@ -269,6 +282,13 @@ export function buildSeedDb(): DemoDb {
     }
   }
 
+  const rate_nightly: Row[] = Object.entries(NIGHTLY).map(([groupId, [price, weekend]]) => ({
+    id: `rn-${groupId}`,
+    rate_group_id: groupId,
+    price,
+    weekend_price: weekend,
+  }));
+
   const rate_third_person: Row[] = THIRD.map(([duration, surcharge]) => ({
     id: `rt-${duration}`,
     duration_min: duration,
@@ -318,6 +338,7 @@ export function buildSeedDb(): DemoDb {
     rate_groups,
     rate_hourly,
     rate_overnight,
+    rate_nightly,
     rate_third_person,
     rooms,
     extras,
