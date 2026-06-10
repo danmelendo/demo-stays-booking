@@ -855,7 +855,8 @@ function PublicReservePage() {
     return e;
   }, [isNightly, checkOut, startAt, isOvernight, duration]);
 
-  // Switching product mode restarts the flow (search state is mode-specific)
+  // Switching product mode restarts the flow (search state is mode-specific,
+  // and the extras catalogue differs between products)
   const switchMode = (m: BookingMode) => {
     if (m === mode) return;
     setMode(m);
@@ -863,6 +864,8 @@ function PublicReservePage() {
     setRoom(null);
     setBreakdown(null);
     setDidSearch(false);
+    setExtraQty({});
+    setDecoMessages({});
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -901,6 +904,12 @@ function PublicReservePage() {
       return (data as ExtraLite[]).filter(e => e.category !== "services" && Number(e.price) > 0);
     },
   });
+
+  // Hookah belongs to the intimate hourly product; hide it in hotel mode
+  const visibleExtras = useMemo(
+    () => (extras ?? []).filter(e => !(isNightly && e.category === "hookah")),
+    [extras, isNightly],
+  );
 
   const fromPriceByRoom = useMemo(() => {
     const map = new Map<string, number>();
@@ -1298,11 +1307,13 @@ function PublicReservePage() {
     <div className="ds-page">
       <style>{CSS}</style>
 
-      {/* Age banner */}
-      <div className="ds-age-banner">
-        <ShieldCheck size={14} />
-        Reservas exclusivas para mayores de 18 años · Solo adultos
-      </div>
+      {/* Age banner — part of the adults-only hourly product, hidden in hotel mode */}
+      {!isNightly && (
+        <div className="ds-age-banner">
+          <ShieldCheck size={14} />
+          Reservas exclusivas para mayores de 18 años · Solo adultos
+        </div>
+      )}
 
       {/* Header */}
       <header className="ds-header">
@@ -1619,7 +1630,7 @@ function PublicReservePage() {
                     const fromPrice = isNightly ? fromNightlyByRoom.get(r.id) : fromPriceByRoom.get(r.id);
                     const unavailable = conflicts?.has(r.id);
                     const isExpanded = expandedExtrasRoom === r.id;
-                    const roomExtras = extras?.filter(e => e.category !== "services") ?? [];
+                    const roomExtras = visibleExtras;
                     const selectedInRoom = roomExtras.filter(e => (extraQty[e.id] ?? 0) > 0);
 
                     return (
@@ -1651,11 +1662,11 @@ function PublicReservePage() {
                               {r.jacuzzi !== "none" && <span className="ds-badge"><Bath size={11} />Con jacuzzi</span>}
                               {r.jacuzzi === "none" && <span className="ds-badge"><Droplet size={11} />Sin jacuzzi</span>}
                               {r.has_tv && <span className="ds-badge"><Tv size={11} />TV</span>}
-                              {r.has_swing && <span className="ds-badge"><Sparkles size={11} />Columpio</span>}
+                              {!isNightly && r.has_swing && <span className="ds-badge"><Sparkles size={11} />Columpio</span>}
                             </div>
                             <div className="ds-room-desc">
-                              Habitación temática para {r.capacity} personas.
-                              {r.has_swing ? " Incluye columpio del amor." : ""}
+                              {isNightly ? `Habitación para ${r.capacity} personas.` : `Habitación temática para ${r.capacity} personas.`}
+                              {!isNightly && r.has_swing ? " Incluye columpio del amor." : ""}
                               {r.has_tv ? " Pantalla disponible." : ""}
                             </div>
                           </div>
@@ -1791,20 +1802,20 @@ function PublicReservePage() {
                     <span className="ds-badge"><Users size={11} />{room.capacity}+ personas</span>
                     {room.jacuzzi !== "none" && <span className="ds-badge"><Bath size={11} />Con jacuzzi</span>}
                     {room.has_tv && <span className="ds-badge"><Tv size={11} />TV</span>}
-                    {room.has_swing && <span className="ds-badge"><Sparkles size={11} />Columpio</span>}
+                    {!isNightly && room.has_swing && <span className="ds-badge"><Sparkles size={11} />Columpio</span>}
                   </div>
 
                 </div>
               </div>
 
               {/* Extras confirmation */}
-              {extras && extras.length > 0 && (
+              {visibleExtras.length > 0 && (
                 <div className="ds-card">
                   <h2 className="ds-serif" style={{ marginBottom: 6 }}>Extras para tu estancia</h2>
                   <p style={{ fontSize: 13, color: "var(--ink-soft)", marginBottom: 24 }}>Opcional — puedes continuar sin añadir nada.</p>
 
                   {(["decoration", "hookah", "accessories", "drinks"] as const).map(cat => {
-                    const items = extras.filter(e => e.category === cat);
+                    const items = visibleExtras.filter(e => e.category === cat);
                     if (!items.length) return null;
                     return (
                       <div key={cat} style={{ marginBottom: 24 }}>
@@ -1889,7 +1900,11 @@ function PublicReservePage() {
               <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                 <label className="ds-check-row">
                   <Checkbox checked={adult} onCheckedChange={v => setAdult(v === true)} />
-                  <span>Confirmo que soy <strong>mayor de 18 años</strong> y acepto las condiciones de reserva. *</span>
+                  <span>
+                    {isNightly
+                      ? <>Confirmo que el titular de la reserva es <strong>mayor de edad</strong> y acepto las condiciones de reserva. *</>
+                      : <>Confirmo que soy <strong>mayor de 18 años</strong> y acepto las condiciones de reserva. *</>}
+                  </span>
                 </label>
                 <label className="ds-check-row">
                   <Checkbox checked={noContact} onCheckedChange={v => setNoContact(v === true)} />
@@ -1992,7 +2007,7 @@ function PublicReservePage() {
       </main>
 
       <footer className="ds-footer">
-        <div>© Demo Stays · Solo +18 · Bebe con responsabilidad</div>
+        <div>{isNightly ? "© Demo Stays · Hotel boutique en el centro de Madrid" : "© Demo Stays · Solo +18 · Bebe con responsabilidad"}</div>
         <div>Pago: <strong>30% online</strong>, resto en el hotel · Confirmación inmediata por email</div>
         <div style={{ marginTop: 8, display: "flex", justifyContent: "center", gap: 24, flexWrap: "wrap" }}>
           {CONTACTS[building]?.phones.map((p, i) => (

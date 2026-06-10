@@ -193,6 +193,7 @@ class QueryBuilder implements PromiseLike<Result> {
     if (this.table === "reservations") {
       r.updated_at = now;
       if (r.cleaning_minutes == null) r.cleaning_minutes = 15;
+      if (r.status == null) r.status = "confirmed"; // mirrors the DB column default
     }
     return r;
   }

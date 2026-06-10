@@ -14,7 +14,8 @@ import { Separator } from "@/components/ui/separator";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { DURATIONS, DURATION_LABELS, eur, isOvernightAllowed, useExtras, useRooms } from "@/lib/data";
-import { calculatePrice, type PriceBreakdown } from "@/lib/pricing";
+import { calculatePrice, calculateNightlyPrice, type PriceBreakdown } from "@/lib/pricing";
+import { NIGHTLY_CHECKIN_HOUR, NIGHTLY_CHECKOUT_HOUR } from "@/lib/booking-mode";
 import { toast } from "sonner";
 import { CalendarIcon, Gift, Plus, Minus, Trash2 } from "lucide-react";
 
@@ -87,6 +88,11 @@ export function NewReservationDialog({ open, onOpenChange, defaultStart, default
   const [duration, setDuration] = useState<number>(120);
   const [cleaningMinutes, setCleaningMinutes] = useState<number>(15);
   const [isOvernight, setIsOvernight] = useState(false);
+  // Stay type: "hours" is the original product; "nights" books full nights like
+  // a traditional hotel (check-in 15:00 / check-out 12:00, priced per night).
+  const [stayType, setStayType] = useState<"hours" | "nights">("hours");
+  const [nightsCount, setNightsCount] = useState(1);
+  const isNightStay = stayType === "nights";
   const [roomId, setRoomId] = useState<string>("");
   const [withJacuzzi, setWithJacuzzi] = useState(false);
   const [people, setPeople] = useState(2);
@@ -111,6 +117,8 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
     setDuration(120);
     setCleaningMinutes(15);
     setIsOvernight(false);
+    setStayType("hours");
+    setNightsCount(1);
     setRoomId(defaultRoomId ?? "");
     setWithJacuzzi(false);
     setPeople(2);
@@ -141,7 +149,12 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       const e = new Date(r.end_at);
       setDate(format(s, "yyyy-MM-dd"));
       setTime(`${String(s.getHours()).padStart(2, "0")}:${String(s.getMinutes()).padStart(2, "0")}`);
-      setIsOvernight(!!r.is_overnight);
+      // Nightly stays (traditional-hotel mode) start at the hotel check-in hour;
+      // the hourly product's "noche completa" starts at 22:00.
+      const nightly = !!r.is_overnight && s.getHours() === NIGHTLY_CHECKIN_HOUR;
+      setStayType(nightly ? "nights" : "hours");
+      setNightsCount(nightly ? Math.max(1, Math.round((e.getTime() - s.getTime()) / 86_400_000)) : 1);
+      setIsOvernight(nightly ? false : !!r.is_overnight);
       setDuration(Math.max(60, Math.round((e.getTime() - s.getTime()) / 60000)));
       setCleaningMinutes(Math.max(15, r.cleaning_minutes ?? 15));
       setRoomId(r.room_id);
@@ -166,7 +179,18 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
     return () => { cancel = true; };
   }, [open, editReservationId]);
 
-  const startAt = useMemo(() => (date && time ? new Date(`${date}T${time}:00`) : null), [date, time]);
+  const startAt = useMemo(() => {
+    if (isNightStay) return date ? new Date(`${date}T${String(NIGHTLY_CHECKIN_HOUR).padStart(2, "0")}:00:00`) : null;
+    return date && time ? new Date(`${date}T${time}:00`) : null;
+  }, [date, time, isNightStay]);
+
+  const nightlyEndAt = useMemo(() => {
+    if (!isNightStay || !startAt) return null;
+    const e = new Date(startAt);
+    e.setDate(e.getDate() + Math.max(1, nightsCount));
+    e.setHours(NIGHTLY_CHECKOUT_HOUR, 0, 0, 0);
+    return e;
+  }, [isNightStay, startAt, nightsCount]);
   const overnightAllowed = startAt ? isOvernightAllowed(startAt) : false;
   const pricingDuration = useMemo(() => {
     // Pricing is defined in Supabase in 30-min steps (60, 90, 120, ...).
@@ -218,16 +242,21 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       return;
     }
     let cancel = false;
-    calculatePrice({
-      rateGroupId,
-      durationMin: pricingDuration,
-      withJacuzzi,
-      isOvernight,
-      overnightCheckout: isOvernight ? "10:00:00" : undefined,
-      people,
-      startAt,
-      extras: selectedExtras,
-    })
+    const promise = isNightStay
+      ? (nightlyEndAt
+          ? calculateNightlyPrice({ rateGroupId, checkIn: startAt, checkOut: nightlyEndAt, extras: selectedExtras })
+          : Promise.resolve(null))
+      : calculatePrice({
+          rateGroupId,
+          durationMin: pricingDuration,
+          withJacuzzi,
+          isOvernight,
+          overnightCheckout: isOvernight ? "10:00:00" : undefined,
+          people,
+          startAt,
+          extras: selectedExtras,
+        });
+    promise
       .then((b) => {
         if (!cancel) setBreakdown(b);
       })
@@ -239,7 +268,7 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
     return () => {
       cancel = true;
     };
-  }, [rateGroupId, pricingDuration, withJacuzzi, isOvernight, people, startAt, selectedExtras]);
+  }, [rateGroupId, pricingDuration, withJacuzzi, isOvernight, isNightStay, nightlyEndAt, people, startAt, selectedExtras]);
 
   const create = useMutation({
     mutationFn: async () => {
@@ -253,6 +282,8 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       }
       if (!isAdmin && isOvernight && (breakdown?.base ?? 0) <= 0)
         throw new Error("Tarifa de noche completa no configurada");
+      if (!isAdmin && isNightStay && (breakdown?.base ?? 0) <= 0)
+        throw new Error("Tarifa por noches no configurada");
       if (isPublic && (!customerName || !customerEmail)) {
         throw new Error("Nombre y email son obligatorios");
       }
@@ -297,6 +328,9 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
       if (isAdmin && overrideEnd) {
         endAt = new Date(overrideEnd);
         if (Number.isNaN(endAt.getTime()) || endAt <= startAt) throw new Error("Hora de salida inválida");
+      } else if (isNightStay) {
+        if (!nightlyEndAt) throw new Error("Datos incompletos");
+        endAt = nightlyEndAt;
       } else {
         endAt = new Date(startAt);
         if (isOvernight) {
@@ -318,7 +352,7 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
         end_at: endAt.toISOString(),
         with_jacuzzi: withJacuzzi,
         people,
-        is_overnight: isOvernight,
+        is_overnight: isNightStay ? true : isOvernight,
         base_price: useOverride ? finalTotal : (breakdown?.base ?? 0),
         third_person_surcharge: breakdown?.thirdPerson ?? 0,
         dynamic_surcharge: breakdown?.dynamicSurcharge ?? 0,
@@ -453,6 +487,24 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left col: when + room */}
             <div className="space-y-4">
+              {!isPublic && (
+                <div className="space-y-1.5">
+                  <Label>Tipo de estancia</Label>
+                  <Select value={stayType} onValueChange={(v) => setStayType(v as "hours" | "nights")}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="hours">Por horas</SelectItem>
+                      <SelectItem value="nights">Por noches (hotel tradicional)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  {isNightStay && (
+                    <div className="text-[10px] text-muted-foreground">
+                      Check-in {NIGHTLY_CHECKIN_HOUR}:00 · check-out {NIGHTLY_CHECKOUT_HOUR}:00 · precio por noche (fin de semana aparte).
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
                   <Label>Fecha</Label>
@@ -479,6 +531,11 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
                 </div>
                 <div className="space-y-1.5">
                   <Label>Hora entrada</Label>
+                  {isNightStay ? (
+                    <div className="flex h-9 items-center rounded-md border px-3 text-sm text-muted-foreground">
+                      {NIGHTLY_CHECKIN_HOUR}:00 (check-in)
+                    </div>
+                  ) : (
                   <Select value={time} onValueChange={(v) => setTime(clampStartTimeToAllowed(v))} disabled={isOvernight}>
                     <SelectTrigger><SelectValue placeholder="HH:MM" /></SelectTrigger>
                     <SelectContent className="max-h-[40vh]">
@@ -487,9 +544,11 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
                       ))}
                     </SelectContent>
                   </Select>
+                  )}
                 </div>
               </div>
 
+              {!isNightStay && (
               <div className="flex items-center justify-between rounded-md border p-3">
                 <div>
                   <div className="text-sm font-medium">Noche completa</div>
@@ -499,8 +558,26 @@ setDate(format(d, "yyyy-MM-dd"));    const hh = String(d.getHours()).padStart(2,
                 </div>
                 <Switch checked={isOvernight} onCheckedChange={setOvernightChecked} disabled={isPublic && !overnightAllowed} />
               </div>
+              )}
 
-              {isOvernight ? (
+              {isNightStay ? (
+                <div className="space-y-1.5">
+                  <Label>Noches</Label>
+                  <Select value={String(nightsCount)} onValueChange={(v) => setNightsCount(Number(v))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent className="max-h-[40vh]">
+                      {Array.from({ length: 14 }, (_, i) => i + 1).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} {n === 1 ? "noche" : "noches"}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {nightlyEndAt && (
+                    <div className="text-[10px] text-muted-foreground">
+                      Salida: {nightlyEndAt.toLocaleDateString("es-ES", { weekday: "short", day: "numeric", month: "short" })} · {NIGHTLY_CHECKOUT_HOUR}:00
+                    </div>
+                  )}
+                </div>
+              ) : isOvernight ? (
                 <div className="space-y-1.5">
                   <Label>Hora de salida</Label>
                   <div className="text-sm">10:00 AM</div>

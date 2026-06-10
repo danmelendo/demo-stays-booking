@@ -9,7 +9,7 @@ import { eur, STATUS_LABELS, STATUS_COLORS, useRooms } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ExtendCleaningButton } from "@/components/ExtendCleaningButton";
 import { ReservationExtrasInfo, type ReservationExtraItem } from "@/components/ReservationExtrasInfo";
-import { Plus, LogIn, LogOut, Clock } from "lucide-react";
+import { Plus, LogIn, LogOut, Clock, BedDouble } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/today")({
@@ -37,6 +37,24 @@ function TodayPage() {
         .order("start_at");
       if (error) throw error;
       return data;
+    },
+    refetchInterval: 30_000,
+  });
+
+  // Traditional-hotel stays checking out today (multi-night reservations start
+  // on an earlier day, so the arrivals query above never surfaces them).
+  const { data: departures } = useQuery({
+    queryKey: ["reservations", "departures-today"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("*, rooms(id,name,building), customers(id,name,phone)")
+        .eq("is_overnight", true)
+        .gte("end_at", today.toISOString())
+        .lt("end_at", tomorrow.toISOString())
+        .order("end_at");
+      if (error) throw error;
+      return (data ?? []).filter((r) => r.status === "confirmed" || r.status === "in_progress");
     },
     refetchInterval: 30_000,
   });
@@ -74,10 +92,11 @@ function TodayPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
         <StatCard label="Reservas hoy" value={String(reservations?.length ?? 0)} />
         <StatCard label="Habitaciones ocupadas" value={`${occupied}/${totalRooms}`} />
         <StatCard label="Próximas (1h)" value={String(upcoming.length)} />
+        <StatCard label="Salidas hoy (noches)" value={String(departures?.length ?? 0)} />
         <StatCard
           label="Caja del día"
           value={eur(reservations?.reduce((s, r) => s + Number(r.total), 0))}
@@ -98,6 +117,7 @@ function TodayPage() {
             {reservations?.map((r) => {
               const start = new Date(r.start_at);
               const end = new Date(r.end_at);
+              const nightsSpan = r.is_overnight ? Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000)) : 0;
               return (
                 <div key={r.id} className="flex items-center gap-3 rounded-md border p-3 flex-wrap">
                   <div className="text-sm font-mono tabular-nums">
@@ -105,6 +125,11 @@ function TodayPage() {
                     {end.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
                   </div>
                   <div className="font-medium">{r.rooms?.building} · {r.rooms?.name}</div>
+                  {nightsSpan > 0 && (
+                    <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30">
+                      {nightsSpan} {nightsSpan === 1 ? "noche" : "noches"}
+                    </Badge>
+                  )}
                   <div className="text-sm text-muted-foreground">
                     {r.customers?.name ?? "Sin nombre"} {r.customers?.phone ? `· ${r.customers.phone}` : ""}
                   </div>
@@ -126,6 +151,51 @@ function TodayPage() {
                     )}
                   </div>
                   <ReservationExtrasInfo items={(r as { reservation_extras?: ReservationExtraItem[] }).reservation_extras} />
+                </div>
+              );
+            })}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Traditional-hotel stays checking out today (started on earlier days) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <BedDouble className="h-4 w-4" /> Salidas de hoy (estancias por noches)
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {!departures?.length && (
+            <div className="text-sm text-muted-foreground">Sin salidas de estancias por noches hoy.</div>
+          )}
+          <div className="space-y-2">
+            {departures?.map((r) => {
+              const start = new Date(r.start_at);
+              const end = new Date(r.end_at);
+              const nightsSpan = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86_400_000));
+              return (
+                <div key={r.id} className="flex items-center gap-3 rounded-md border p-3 flex-wrap">
+                  <div className="text-sm font-mono tabular-nums">
+                    Salida {end.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" })}
+                  </div>
+                  <div className="font-medium">{r.rooms?.building} · {r.rooms?.name}</div>
+                  <Badge variant="outline" className="bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30">
+                    {nightsSpan} {nightsSpan === 1 ? "noche" : "noches"}
+                  </Badge>
+                  <div className="text-sm text-muted-foreground">
+                    {r.customers?.name ?? "Sin nombre"} {r.customers?.phone ? `· ${r.customers.phone}` : ""}
+                  </div>
+                  <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                  <div className="ml-auto flex items-center gap-1">
+                    <span className="text-sm font-medium tabular-nums mr-2">{eur(Number(r.total))}</span>
+                    {r.status === "in_progress" && (
+                      <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: r.id, status: "completed" })}>
+                        <LogOut className="h-3.5 w-3.5 mr-1" /> Check-out
+                      </Button>
+                    )}
+                    <ExtendCleaningButton reservationId={r.id} currentCleaning={(r as { cleaning_minutes?: number }).cleaning_minutes ?? 15} />
+                  </div>
                 </div>
               );
             })}
