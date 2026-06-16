@@ -46,9 +46,11 @@ export function ExtendCleaningButton({
       <Button
         size="sm"
         variant="outline"
+        title="Ampliar limpieza"
         onClick={() => { setMinutes(Math.max(15, (currentCleaning || 15) + 15)); setOpen(true); }}
       >
-        <Sparkles className="h-3.5 w-3.5 mr-1" /> Ampliar limpieza
+        <Sparkles className="h-3.5 w-3.5 sm:mr-1" />
+        <span className="hidden sm:inline">Ampliar limpieza</span>
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md">
