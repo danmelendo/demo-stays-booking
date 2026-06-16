@@ -195,6 +195,15 @@ class QueryBuilder implements PromiseLike<Result> {
       if (r.cleaning_minutes == null) r.cleaning_minutes = 15;
       if (r.status == null) r.status = "confirmed"; // mirrors the DB column default
     }
+    if (this.table === "promo_codes") {
+      // Mirror the DB column defaults so freshly created codes list correctly.
+      if (r.times_used == null) r.times_used = 0;
+      if (r.active == null) r.active = true;
+      if (r.archived == null) r.archived = false;
+      if (r.single_use == null) r.single_use = false;
+      if (r.max_uses === undefined) r.max_uses = null;
+      if (r.valid_until === undefined) r.valid_until = null;
+    }
     return r;
   }
 
@@ -456,6 +465,22 @@ async function rpc(fn: string, args: Record<string, unknown> = {}): Promise<{ da
     a.updated_at = new Date().toISOString();
     persist();
     return { data: moved, error: null };
+  }
+
+  if (fn === "archive_expired_promo_codes") {
+    // Archive (and deactivate) any code whose validity window has elapsed, so the
+    // admin list stays accurate. Mirrors the SECURITY DEFINER Postgres function.
+    const nowMs = Date.now();
+    let archived = 0;
+    for (const c of db().promo_codes ?? []) {
+      if (!c.archived && c.valid_until != null && new Date(c.valid_until as string).getTime() < nowMs) {
+        c.archived = true;
+        c.active = false;
+        archived += 1;
+      }
+    }
+    if (archived) persist();
+    return { data: archived, error: null };
   }
 
   return { data: null, error: null };

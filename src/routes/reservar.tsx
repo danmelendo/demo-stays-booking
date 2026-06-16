@@ -15,7 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   Bath, Droplet, Users, CalendarIcon, Sparkles,
   ShieldCheck, CheckCircle2, CreditCard, Plus, Minus, Gift,
-  Phone, ChevronRight, Tv, Moon, Clock, Star, Flame, MapPin, Globe, BedDouble,
+  Phone, ChevronRight, Tv, Moon, Clock, Star, Flame, MapPin, Globe, BedDouble, MessageCircle,
 } from "lucide-react";
 import { toast } from "sonner";
 import { calculatePrice, calculateNightlyPrice, type PriceBreakdown } from "@/lib/pricing";
@@ -205,6 +205,15 @@ const CONTACTS: Record<string, { phones: { number: string; href: string }[]; ema
     email: "reservas@demostays.example",
     address: "Avenida Demo, 15 · Sede Sur",
   },
+};
+
+// WhatsApp booking line per sede (demo mobile numbers). Used for the alternative
+// "reservar por WhatsApp" flow — no card payment, no DB write: it just opens a
+// chat with the reservation details prefilled so reception confirms manually.
+const WHATSAPP_NUMBERS: Record<string, { display: string; intl: string }> = {
+  central: { display: "600 000 001", intl: "34600000001" },
+  norte: { display: "600 000 002", intl: "34600000002" },
+  sur: { display: "600 000 003", intl: "34600000003" },
 };
 
 // ─────────────────────────────────────────────
@@ -1098,6 +1107,55 @@ function PublicReservePage() {
     setStep("payment");
   };
 
+  // Alternative booking path: open WhatsApp with the reservation details
+  // prefilled. No card payment (skips the gateway) and no DB write — reception
+  // confirms the booking manually from the chat.
+  const reserveViaWhatsApp = () => {
+    if (!room || !startAt) return;
+    const wa = WHATSAPP_NUMBERS[building];
+    if (!wa) { toast.error("No hay WhatsApp disponible para esta sede"); return; }
+
+    const sedeLabel = BUILDINGS.find(b => b.value === building)?.label ?? room.building;
+    const fechaLarga = startAt.toLocaleDateString("es-ES", {
+      weekday: "long", day: "numeric", month: "long", year: "numeric",
+    });
+    const estancia = isNightly
+      ? `${nights} ${nights === 1 ? "noche" : "noches"} (entrada ${checkIn}, salida ${checkOut})`
+      : isOvernight
+        ? "Noche completa (hasta 10:00)"
+        : DURATION_LABELS[pricingDuration];
+
+    const extrasSeleccionados = Object.entries(extraQty)
+      .filter(([, q]) => q > 0)
+      .map(([id, q]) => {
+        const ex = extras?.find(e => e.id === id);
+        return ex ? `• ${ex.name} x${q}` : null;
+      })
+      .filter(Boolean);
+
+    const lines = [
+      "¡Hola! Quiero reservar por WhatsApp (sin pago con tarjeta):",
+      "",
+      `Sede: ${sedeLabel}`,
+      `Habitación: ${room.name}`,
+      `Fecha: ${fechaLarga}`,
+      ...(isNightly ? [] : [`Entrada: ${time}`]),
+      `Duración: ${estancia}`,
+      `Personas: ${people}`,
+      ...(extrasSeleccionados.length ? ["", "Extras:", ...extrasSeleccionados] : []),
+      "",
+      `Total estimado: ${eur(payableTotal)}`,
+      "",
+      "Mis datos:",
+      `- Nombre: ${customerName || "(por indicar)"}`,
+      `- Teléfono: ${customerPhone || "(por indicar)"}`,
+      `- Email: ${customerEmail || "(por indicar)"}`,
+    ];
+
+    const url = `https://wa.me/${wa.intl}?text=${encodeURIComponent(lines.join("\n"))}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
+
   const createReservation = async () => {
     if (!room || !startAt || !endAt || !breakdown) return;
     if (payingGuard.current) return;
@@ -1972,6 +2030,35 @@ function PublicReservePage() {
 
               <p style={{ fontSize: 11, color: "var(--ink-soft)", textAlign: "center", marginTop: 10 }}>
                 Pago seguro procesado por Redsys · Redirección al TPV de tu banco
+              </p>
+
+              {/* Alternative: book via WhatsApp (no card payment, no gateway) */}
+              <div style={{ display: "flex", alignItems: "center", gap: 12, margin: "22px 0 16px" }}>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+                <span style={{ fontSize: 11, letterSpacing: "0.1em", textTransform: "uppercase", color: "var(--ink-soft)" }}>o</span>
+                <div style={{ flex: 1, height: 1, background: "var(--border)" }} />
+              </div>
+
+              <button
+                type="button"
+                onClick={reserveViaWhatsApp}
+                disabled={paying}
+                style={{
+                  width: "100%", height: 52, borderRadius: 10, border: "none",
+                  background: "#25D366", color: "#fff", cursor: paying ? "not-allowed" : "pointer",
+                  fontSize: 14, fontWeight: 500, letterSpacing: "0.04em",
+                  display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+                  fontFamily: "'DM Sans', sans-serif", opacity: paying ? 0.5 : 1,
+                  transition: "filter 0.2s",
+                }}
+                onMouseEnter={e => (e.currentTarget.style.filter = "brightness(0.93)")}
+                onMouseLeave={e => (e.currentTarget.style.filter = "none")}
+              >
+                <MessageCircle size={18} /> Reservar por WhatsApp (sin pago online)
+              </button>
+
+              <p style={{ fontSize: 11, color: "var(--ink-soft)", textAlign: "center", marginTop: 10 }}>
+                Te abriremos un chat con los datos de tu reserva. Sin pago con tarjeta · Confirmación con recepción
               </p>
             </div>
             <SummaryBar room={room} startAt={startAt} endAt={endAt} people={people} isOvernight={isOvernight} duration={pricingDuration} nights={isNightly ? nights : null} breakdown={breakdown} />

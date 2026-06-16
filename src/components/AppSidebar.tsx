@@ -22,6 +22,7 @@ import {
   LogOut,
   PackagePlus,
   Tag,
+  Ticket,
   Users,
   BarChart3,
   Wand2,
@@ -43,6 +44,7 @@ const adminItems = [
   { to: "/rooms", label: "Habitaciones", icon: DoorOpen },
   { to: "/rates", label: "Tarifas", icon: Tag },
   { to: "/extras", label: "Extras", icon: PackagePlus },
+  { to: "/promos", label: "Códigos promo", icon: Ticket },
 ] as const;
 
 export function AppSidebar() {

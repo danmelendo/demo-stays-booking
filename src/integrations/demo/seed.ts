@@ -12,7 +12,7 @@ export type Row = Record<string, any>;
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 6; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 7; // bump to force a reseed when the shape changes
 
 export const DEMO_USER_ID = "demo-user-admin";
 
@@ -328,6 +328,27 @@ export function buildSeedDb(): DemoDb {
 
   const customers: Row[] = CUSTOMERS.map((c) => ({ ...c, created_at: nowIso }));
 
+  // Promo codes: a percentage code with no expiry, a fixed single-use code, and
+  // an already-expired one so the "Archivados" section has content.
+  const promo_codes: Row[] = [
+    {
+      id: "promo-verano15", code: "VERANO15", discount_type: "percent", discount_value: 15,
+      valid_from: nowIso, valid_until: null, single_use: false, max_uses: null,
+      times_used: 4, active: true, archived: false, created_at: nowIso,
+    },
+    {
+      id: "promo-bienvenida", code: "BIENVENIDA10", discount_type: "fixed", discount_value: 10,
+      valid_from: nowIso, valid_until: null, single_use: true, max_uses: 1,
+      times_used: 0, active: true, archived: false, created_at: nowIso,
+    },
+    {
+      id: "promo-navidad", code: "NAVIDAD20", discount_type: "percent", discount_value: 20,
+      valid_from: new Date(now.getTime() - 90 * 86_400_000).toISOString(),
+      valid_until: new Date(now.getTime() - 30 * 86_400_000).toISOString(),
+      single_use: false, max_uses: null, times_used: 12, active: false, archived: true, created_at: nowIso,
+    },
+  ];
+
   const { reservations, reservationExtras } = buildReservations(now);
 
   const user_roles: Row[] = [
@@ -345,6 +366,7 @@ export function buildSeedDb(): DemoDb {
     gift_thresholds,
     dynamic_rules,
     customers,
+    promo_codes,
     reservations,
     reservation_extras: reservationExtras,
     user_roles,

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useRooms, STATUS_COLORS } from "@/lib/data";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRooms, STATUS_COLORS, HOTELS, buildingKey } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 
@@ -26,6 +27,11 @@ function CalendarPage() {
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [defaults, setDefaults] = useState<{ start?: Date; roomId?: string }>({});
+  const [buildingFilter, setBuildingFilter] = useState<string>("all");
+
+  const visibleRooms = rooms?.filter(
+    (r) => buildingFilter === "all" || buildingKey(r.building) === buildingFilter,
+  );
 
   const dayEnd = new Date(day);
   dayEnd.setDate(dayEnd.getDate() + 1);
@@ -61,18 +67,27 @@ function CalendarPage() {
             {day.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
           </h1>
         </div>
-        <Button onClick={() => { setEditId(undefined); setDefaults({ start: day }); setOpen(true); }}>
-          <Plus className="mr-2 h-4 w-4" /> Nueva reserva
-        </Button>
+        <div className="flex items-center gap-2">
+          <Select value={buildingFilter} onValueChange={setBuildingFilter}>
+            <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas las sedes</SelectItem>
+              {HOTELS.map((h) => <SelectItem key={h.key} value={h.key}>{h.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Button onClick={() => { setEditId(undefined); setDefaults({ start: day }); setOpen(true); }}>
+            <Plus className="mr-2 h-4 w-4" /> Nueva reserva
+          </Button>
+        </div>
       </div>
 
       <Card>
         <CardContent className="p-0 overflow-auto">
           <div className="min-w-[900px] relative">
             {/* Header row */}
-            <div className="grid sticky top-0 bg-background z-10 border-b" style={{ gridTemplateColumns: `60px repeat(${rooms?.length ?? 0}, minmax(120px, 1fr))` }}>
+            <div className="grid sticky top-0 bg-background z-10 border-b" style={{ gridTemplateColumns: `60px repeat(${visibleRooms?.length ?? 0}, minmax(120px, 1fr))` }}>
               <div className="text-xs text-muted-foreground p-2"></div>
-              {rooms?.map((r) => (
+              {visibleRooms?.map((r) => (
                 <div key={r.id} className="text-xs font-medium p-2 border-l truncate" title={`${r.building} · ${r.name}`}>
                   <div className="text-muted-foreground">{r.building}</div>
                   <div>{r.name}</div>
@@ -81,7 +96,7 @@ function CalendarPage() {
             </div>
 
             {/* Body */}
-            <div className="grid relative" style={{ gridTemplateColumns: `60px repeat(${rooms?.length ?? 0}, minmax(120px, 1fr))` }}>
+            <div className="grid relative" style={{ gridTemplateColumns: `60px repeat(${visibleRooms?.length ?? 0}, minmax(120px, 1fr))` }}>
               {/* Hour labels */}
               <div className="relative" style={{ height: (END_HOUR - START_HOUR) * HOUR_HEIGHT }}>
                 {Array.from({ length: END_HOUR - START_HOUR }).map((_, i) => (
@@ -91,7 +106,7 @@ function CalendarPage() {
                 ))}
               </div>
 
-              {rooms?.map((room) => (
+              {visibleRooms?.map((room) => (
                 <div
                   key={room.id}
                   className="relative border-l cursor-pointer"

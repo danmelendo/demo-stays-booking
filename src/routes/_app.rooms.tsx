@@ -1,17 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useRooms } from "@/lib/data";
+import { useRooms, type Room } from "@/lib/data";
 import { useRoles } from "@/lib/roles";
 import { Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Bath, Droplet, Pencil, Check, X } from "lucide-react";
+import { Bath, Droplet, Pencil, Check, X, ChevronUp, ChevronDown, Info } from "lucide-react";
 
 export const Route = createFileRoute("/_app/rooms")({
   component: RoomsPage,
@@ -36,6 +36,22 @@ function RoomsPage() {
   const qc = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
+
+  // Rooms with a reservation already in progress (guest checked in) are shown as
+  // occupied regardless of their manual status.
+  const { data: inProgressRoomIds } = useQuery({
+    queryKey: ["rooms", "in_progress_room_ids"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reservations")
+        .select("room_id")
+        .eq("status", "in_progress");
+      if (error) throw error;
+      return new Set((data ?? []).map((r) => r.room_id as string));
+    },
+    refetchInterval: 30_000,
+  });
+  const occupiedRoomIds = inProgressRoomIds ?? new Set<string>();
 
   if (rolesLoading) return null;
   if (!isAdmin) return <Navigate to="/today" />;
@@ -64,6 +80,17 @@ function RoomsPage() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const swapOrder = useMutation({
+    mutationFn: async ({ a, b }: { a: Room; b: Room }) => {
+      const { error: e1 } = await supabase.from("rooms").update({ sort_order: b.sort_order }).eq("id", a.id);
+      if (e1) throw e1;
+      const { error: e2 } = await supabase.from("rooms").update({ sort_order: a.sort_order }).eq("id", b.id);
+      if (e2) throw e2;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["rooms"] }),
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const startEdit = (id: string, currentName: string) => {
     setEditingId(id);
     setEditingName(currentName);
@@ -86,11 +113,16 @@ function RoomsPage() {
         <p className="text-sm text-muted-foreground">Estado y catálogo del hotel</p>
       </div>
 
-      {buildings.map((b) => (
+      {buildings.map((b) => {
+        const buildingRooms = rooms?.filter((r) => r.building === b) ?? [];
+        return (
         <div key={b} className="space-y-2">
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Sede {b}</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {rooms?.filter((r) => r.building === b).map((r) => (
+            {buildingRooms.map((r, i) => {
+              const autoOccupied = occupiedRoomIds.has(r.id);
+              const displayStatus = autoOccupied ? "occupied" : r.status;
+              return (
               <Card key={r.id}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base">
@@ -121,6 +153,22 @@ function RoomsPage() {
                           {r.jacuzzi === "none" && <Droplet className="h-4 w-4 text-muted-foreground" />}
                           <Button
                             size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                            disabled={i === 0 || swapOrder.isPending}
+                            title="Subir"
+                            onClick={() => swapOrder.mutate({ a: r, b: buildingRooms[i - 1] })}
+                          >
+                            <ChevronUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                            disabled={i === buildingRooms.length - 1 || swapOrder.isPending}
+                            title="Bajar"
+                            onClick={() => swapOrder.mutate({ a: r, b: buildingRooms[i + 1] })}
+                          >
+                            <ChevronDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            size="icon" variant="ghost" className="h-6 w-6 text-muted-foreground hover:text-foreground"
                             onClick={() => startEdit(r.id, r.name)}
                           >
                             <Pencil className="h-3.5 w-3.5" />
@@ -136,7 +184,13 @@ function RoomsPage() {
                     <span>·</span>
                     <span>{r.jacuzzi === "none" ? "Sin jacuzzi" : "Con jacuzzi"}</span>
                   </div>
-                  <Badge variant="outline" className={STATUS_STYLES[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                  <Badge variant="outline" className={STATUS_STYLES[displayStatus]}>{STATUS_LABELS[displayStatus]}</Badge>
+                  {autoOccupied && (
+                    <p className="flex items-center gap-1.5 text-xs text-blue-700 dark:text-blue-300">
+                      <Info className="h-3.5 w-3.5 shrink-0" />
+                      Reserva en curso (check-in realizado)
+                    </p>
+                  )}
                   <Select value={r.status} onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
@@ -145,10 +199,12 @@ function RoomsPage() {
                   </Select>
                 </CardContent>
               </Card>
-            ))}
+              );
+            })}
           </div>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 }

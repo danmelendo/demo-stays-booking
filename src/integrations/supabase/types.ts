@@ -169,6 +169,51 @@ export type Database = {
           },
         ]
       }
+      promo_codes: {
+        Row: {
+          active: boolean
+          archived: boolean
+          code: string
+          created_at: string
+          discount_type: string
+          discount_value: number
+          id: string
+          max_uses: number | null
+          single_use: boolean
+          times_used: number
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          active?: boolean
+          archived?: boolean
+          code: string
+          created_at?: string
+          discount_type: string
+          discount_value: number
+          id?: string
+          max_uses?: number | null
+          single_use?: boolean
+          times_used?: number
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Update: {
+          active?: boolean
+          archived?: boolean
+          code?: string
+          created_at?: string
+          discount_type?: string
+          discount_value?: number
+          id?: string
+          max_uses?: number | null
+          single_use?: boolean
+          times_used?: number
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: []
+      }
       rate_groups: {
         Row: {
           created_at: string
@@ -545,6 +590,10 @@ export type Database = {
           p_reservation_id: string
           p_cleaning_minutes: number
         }
+        Returns: number
+      }
+      archive_expired_promo_codes: {
+        Args: Record<PropertyKey, never>
         Returns: number
       }
     }
