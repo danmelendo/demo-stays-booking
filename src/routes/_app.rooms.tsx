@@ -53,9 +53,6 @@ function RoomsPage() {
   });
   const occupiedRoomIds = inProgressRoomIds ?? new Set<string>();
 
-  if (rolesLoading) return null;
-  if (!isAdmin) return <Navigate to="/today" />;
-
   const updateStatus = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
       const { error } = await supabase.from("rooms").update({ status: status as never }).eq("id", id);
@@ -103,6 +100,9 @@ function RoomsPage() {
   };
 
   const cancelEdit = () => setEditingId(null);
+
+  if (rolesLoading) return null;
+  if (!isAdmin) return <Navigate to="/today" />;
 
   const buildings = Array.from(new Set(rooms?.map((r) => r.building) ?? []));
 

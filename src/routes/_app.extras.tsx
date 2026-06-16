@@ -23,9 +23,6 @@ function ExtrasPage() {
   const { data } = useExtras();
   const qc = useQueryClient();
 
-  if (rolesLoading) return null;
-  if (!isAdmin) return <Navigate to="/today" />;
-
   const update = useMutation({
     mutationFn: async ({ id, patch }: { id: string; patch: { name?: string; price?: number; active?: boolean } }) => {
       const { error } = await supabase.from("extras").update(patch).eq("id", id);
@@ -33,6 +30,9 @@ function ExtrasPage() {
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["extras"] }); toast.success("Guardado"); },
   });
+
+  if (rolesLoading) return null;
+  if (!isAdmin) return <Navigate to="/today" />;
 
   const cats = Array.from(new Set(data?.map((e) => e.category) ?? []));
 
