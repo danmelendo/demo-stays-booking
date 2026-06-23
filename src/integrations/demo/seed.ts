@@ -12,7 +12,7 @@ export type Row = Record<string, any>;
 export type DemoDb = Record<string, Row[]>;
 
 const STORAGE_KEY = "demo-stays-db";
-const STORAGE_VERSION = 7; // bump to force a reseed when the shape changes
+const STORAGE_VERSION = 8; // bump to force a reseed when the shape changes
 
 export const DEMO_USER_ID = "demo-user-admin";
 
@@ -305,6 +305,9 @@ export function buildSeedDb(): DemoDb {
       capacity,
       status: "available",
       rate_group_id: groupId,
+      // Only rate groups with overnight pricing can offer "noche completa";
+      // the rest are hourly-only so reception can demo the per-room toggle.
+      allows_overnight: groupId in OVERNIGHT,
       description: null,
       image_url: null,
       has_tv: true,

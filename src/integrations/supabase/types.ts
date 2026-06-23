@@ -496,6 +496,7 @@ export type Database = {
       rooms: {
         Row: {
           active: boolean
+          allows_overnight: boolean
           building: string
           capacity: number
           created_at: string
@@ -512,6 +513,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          allows_overnight?: boolean
           building: string
           capacity?: number
           created_at?: string
@@ -528,6 +530,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          allows_overnight?: boolean
           building?: string
           capacity?: number
           created_at?: string

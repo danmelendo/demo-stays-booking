@@ -8,6 +8,7 @@
 supabase/.temp/
 .lovable/
 .claude/
+.playwright-mcp/
 
 # Logs
 logs

@@ -144,7 +144,7 @@ function CalendarPage() {
                           className={`absolute left-1 right-1 rounded border px-1.5 py-1 text-[10px] overflow-hidden cursor-pointer ${STATUS_COLORS[r.status]}`}
                           style={{ top, height }}
                           onClick={(ev) => { ev.stopPropagation(); setEditId(r.id); setDefaults({}); setOpen(true); }}
-                          title={`${r.customers?.name ?? "Sin nombre"} · ${s.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}–${e.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}`}
+                          title={`${r.customers?.name ?? "Sin nombre"} · ${s.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}–${e.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}${r.internal_notes ? ` · Notas: ${r.internal_notes}` : ""}`}
                         >
                           <div className="font-medium truncate">
                             {s.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}–{e.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"})}

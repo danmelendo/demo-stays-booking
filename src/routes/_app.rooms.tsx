@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { useRooms, type Room } from "@/lib/data";
 import { useRoles } from "@/lib/roles";
 import { Navigate } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { Bath, Droplet, Pencil, Check, X, ChevronUp, ChevronDown, Info } from "lucide-react";
+import { Bath, Droplet, Pencil, Check, X, ChevronUp, ChevronDown, Info, Moon } from "lucide-react";
 
 export const Route = createFileRoute("/_app/rooms")({
   component: RoomsPage,
@@ -37,15 +38,20 @@ function RoomsPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
 
-  // Rooms with a reservation already in progress (guest checked in) are shown as
-  // occupied regardless of their manual status.
+  // Habitaciones con una reserva en curso (check-in realizado) se muestran como
+  // ocupadas, independientemente de su estado manual. Solo cuentan las reservas
+  // cuyo horario sigue vigente (end_at en el futuro): el paso in_progress →
+  // completed es manual, así que una reserva a la que recepción olvidó dar
+  // "Finalizar" quedaría in_progress para siempre y marcaría la habitación como
+  // ocupada aunque ya esté libre. Filtrando por end_at evitamos ese falso "en curso".
   const { data: inProgressRoomIds } = useQuery({
     queryKey: ["rooms", "in_progress_room_ids"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("reservations")
         .select("room_id")
-        .eq("status", "in_progress");
+        .eq("status", "in_progress")
+        .gt("end_at", new Date().toISOString());
       if (error) throw error;
       return new Set((data ?? []).map((r) => r.room_id as string));
     },
@@ -73,6 +79,19 @@ function RoomsPage() {
       qc.invalidateQueries({ queryKey: ["rooms"] });
       toast.success("Nombre actualizado");
       setEditingId(null);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateOvernight = useMutation({
+    mutationFn: async ({ id, allows }: { id: string; allows: boolean }) => {
+      const { error } = await supabase.from("rooms").update({ allows_overnight: allows }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rooms"] });
+      qc.invalidateQueries({ queryKey: ["public-rooms"] });
+      toast.success("Noche completa actualizada");
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -191,12 +210,28 @@ function RoomsPage() {
                       Reserva en curso (check-in realizado)
                     </p>
                   )}
-                  <Select value={r.status} onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v })}>
+                  {/* When a reservation is in progress the room is occupied by an
+                      active guest, so we show that effective status and lock the
+                      manual selector until checkout — otherwise it would
+                      contradictorily read "Disponible" while occupied. */}
+                  <Select value={displayStatus} disabled={autoOccupied} onValueChange={(v) => updateStatus.mutate({ id: r.id, status: v })}>
                     <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                     </SelectContent>
                   </Select>
+                  <div className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-2">
+                    <div className="flex items-center gap-1.5 text-xs">
+                      <Moon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="font-medium">Noche completa</span>
+                    </div>
+                    <Switch
+                      checked={r.allows_overnight}
+                      disabled={updateOvernight.isPending}
+                      onCheckedChange={(v) => updateOvernight.mutate({ id: r.id, allows: v })}
+                      aria-label="Permitir noche completa"
+                    />
+                  </div>
                 </CardContent>
               </Card>
               );

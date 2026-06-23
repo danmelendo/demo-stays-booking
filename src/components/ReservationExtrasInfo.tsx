@@ -1,6 +1,6 @@
-// Compact list of a reservation's extras for staff. Decoration phrases the
-// customer entered (bed + glass/LED screen) are highlighted so reception can
-// set up the room. Fed by a `reservation_extras(...)` embed; see usage.
+// Compact list of a reservation's extras + internal notes for staff. Decoration
+// phrases the customer entered (bed + glass/LED screen) are highlighted so
+// reception can set up the room. Fed by a `reservation_extras(...)` embed.
 export interface ReservationExtraItem {
   qty: number;
   is_gift: boolean;
@@ -9,11 +9,24 @@ export interface ReservationExtraItem {
   extras: { name: string; category: string } | null;
 }
 
-export function ReservationExtrasInfo({ items }: { items: ReservationExtraItem[] | null | undefined }) {
-  if (!items?.length) return null;
+export function ReservationExtrasInfo({
+  items,
+  notes,
+}: {
+  items: ReservationExtraItem[] | null | undefined;
+  notes?: string | null;
+}) {
+  const hasItems = !!items?.length;
+  const note = notes?.trim();
+  if (!hasItems && !note) return null;
   return (
     <div className="w-full mt-1 space-y-1">
-      {items.map((it, i) => {
+      {note && (
+        <div className="text-xs rounded border border-sky-500/30 bg-sky-500/10 px-2 py-1 text-sky-800 dark:text-sky-200">
+          <span className="font-medium">Notas internas:</span> {note}
+        </div>
+      )}
+      {items?.map((it, i) => {
         const name = it.extras?.name ?? "Extra";
         const bed = it.bed_message?.trim();
         const screen = it.screen_message?.trim();

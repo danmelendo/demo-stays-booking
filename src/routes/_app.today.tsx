@@ -135,6 +135,12 @@ function TodayPage() {
                   </div>
                   <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
                   <div className="ml-auto flex items-center gap-1">
+                    {/* Web pública: importe ya cobrado al TPV (depósito con promos) */}
+                    {r.created_by_role === "public" && r.deposit_paid && (
+                      <span className="text-xs text-emerald-700 dark:text-emerald-300 mr-1" title="Pagado online al TPV">
+                        web {eur(Number(r.paid_amount))}
+                      </span>
+                    )}
                     <span className="text-sm font-medium tabular-nums mr-2">{eur(Number(r.total))}</span>
                     {r.status === "confirmed" && (
                       <Button size="sm" variant="outline" onClick={() => updateStatus.mutate({ id: r.id, status: "in_progress" })}>
@@ -150,7 +156,10 @@ function TodayPage() {
                       <ExtendCleaningButton reservationId={r.id} currentCleaning={(r as { cleaning_minutes?: number }).cleaning_minutes ?? 15} />
                     )}
                   </div>
-                  <ReservationExtrasInfo items={(r as { reservation_extras?: ReservationExtraItem[] }).reservation_extras} />
+                  <ReservationExtrasInfo
+                    items={(r as { reservation_extras?: ReservationExtraItem[] }).reservation_extras}
+                    notes={(r as { internal_notes?: string | null }).internal_notes}
+                  />
                 </div>
               );
             })}

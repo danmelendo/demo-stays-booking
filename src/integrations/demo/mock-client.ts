@@ -32,7 +32,7 @@ function clone<T>(v: T): T {
 // ── Filters ─────────────────────────────────────────────────────────────────
 type Filter =
   | { t: "eq" | "neq" | "gte" | "lte" | "lt" | "gt"; c: string; v: unknown }
-  | { t: "notin"; c: string; list: unknown[] }
+  | { t: "in" | "notin"; c: string; list: unknown[] }
   | { t: "or"; conds: Filter[] };
 
 function coerce(raw: string): unknown {
@@ -64,6 +64,7 @@ function matches(row: Row, f: Filter): boolean {
     case "lte": return row[f.c] <= (f.v as never);
     case "lt": return row[f.c] < (f.v as never);
     case "gt": return row[f.c] > (f.v as never);
+    case "in": return f.list.includes(row[f.c]);
     case "notin": return !f.list.includes(row[f.c]);
     case "or": return f.conds.some((c) => matches(row, c));
   }
@@ -172,6 +173,7 @@ class QueryBuilder implements PromiseLike<Result> {
   lte(c: string, v: unknown) { this.filters.push({ t: "lte", c, v }); return this; }
   lt(c: string, v: unknown) { this.filters.push({ t: "lt", c, v }); return this; }
   gt(c: string, v: unknown) { this.filters.push({ t: "gt", c, v }); return this; }
+  in(c: string, list: unknown[]) { this.filters.push({ t: "in", c, list }); return this; }
   not(c: string, op: string, v: string) {
     if (op === "in") {
       const list = v.replace(/^\(|\)$/g, "").split(",").map((s) => coerce(s.trim()));

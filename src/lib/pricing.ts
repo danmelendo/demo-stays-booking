@@ -96,7 +96,10 @@ export async function calculatePrice(input: PriceInput): Promise<PriceBreakdown>
           .select("id", { count: "exact", head: true })
           .gte("start_at", dayStart.toISOString())
           .lt("start_at", dayEnd.toISOString())
-          .not("status", "in", "(cancelled,no_show)"),
+          // Only reservations that actually hold a room count towards occupancy.
+          // pending (abandoned payments) and rejected must NOT inflate the ratio,
+          // otherwise the occupancy surcharge fires when rooms are really free.
+          .in("status", ["confirmed", "in_progress", "completed"]),
         supabase.from("rooms").select("id", { count: "exact", head: true }).eq("active", true),
       ]);
       const totalRooms = total ?? 1;

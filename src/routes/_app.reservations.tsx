@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { eur, STATUS_LABELS, STATUS_COLORS } from "@/lib/data";
+import { eur, STATUS_LABELS, STATUS_COLORS, HOTELS, buildingKey } from "@/lib/data";
 import { NewReservationDialog } from "@/components/NewReservationDialog";
 import { ReservationExtrasInfo, type ReservationExtraItem } from "@/components/ReservationExtrasInfo";
 import { Plus, X } from "lucide-react";
@@ -23,6 +26,10 @@ function ReservationsPage() {
   const [editId, setEditId] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [buildingFilter, setBuildingFilter] = useState<string>("all");
+  // Cancelación con motivo obligatorio: id de la reserva a cancelar + texto.
+  const [cancelTarget, setCancelTarget] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState("");
 
   const { data: reservations } = useQuery({
     queryKey: ["reservations", "list"],
@@ -38,18 +45,32 @@ function ReservationsPage() {
   });
 
   const cancel = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("reservations").update({ status: "cancelled" as never }).eq("id", id);
+    mutationFn: async ({ id, reason }: { id: string; reason: string }) => {
+      const { error } = await supabase
+        .from("reservations")
+        .update({ status: "cancelled", cancellation_reason: reason } as never)
+        .eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Reserva cancelada");
       qc.invalidateQueries({ queryKey: ["reservations"] });
+      setCancelTarget(null);
+      setCancelReason("");
     },
+    onError: (e: Error) => toast.error(e.message),
   });
+
+  const confirmCancel = () => {
+    const reason = cancelReason.trim();
+    if (!cancelTarget) return;
+    if (!reason) { toast.error("Indica el motivo de la cancelación"); return; }
+    cancel.mutate({ id: cancelTarget, reason });
+  };
 
   const filtered = reservations?.filter((r) => {
     if (statusFilter !== "all" && r.status !== statusFilter) return false;
+    if (buildingFilter !== "all" && buildingKey(r.rooms?.building) !== buildingFilter) return false;
     if (search) {
       const s = search.toLowerCase();
       return (
@@ -77,6 +98,13 @@ function ReservationsPage() {
             {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
+        <Select value={buildingFilter} onValueChange={setBuildingFilter}>
+          <SelectTrigger className="w-44"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas las sedes</SelectItem>
+            {HOTELS.map((h) => <SelectItem key={h.key} value={h.key}>{h.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
       </div>
 
       <Card>
@@ -99,6 +127,7 @@ function ReservationsPage() {
                   const s = new Date(r.start_at);
                   const e = new Date(r.end_at);
                   const extraItems = (r as { reservation_extras?: ReservationExtraItem[] }).reservation_extras;
+                  const notes = (r as { internal_notes?: string | null }).internal_notes;
                   return (
                     <Fragment key={r.id}>
                     <tr
@@ -132,20 +161,37 @@ function ReservationsPage() {
                           );
                         })()}
                       </td>
-                      <td className="p-2"><Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge></td>
-                      <td className="p-2 text-right font-medium tabular-nums">{eur(Number(r.total))}</td>
+                      <td className="p-2">
+                        <Badge variant="outline" className={STATUS_COLORS[r.status]}>{STATUS_LABELS[r.status]}</Badge>
+                        {(() => {
+                          const reason = (r as { cancellation_reason?: string | null }).cancellation_reason;
+                          return (r.status === "cancelled" || r.status === "rejected") && reason
+                            ? <div className="text-xs text-muted-foreground mt-1 max-w-[200px]">{reason}</div>
+                            : null;
+                        })()}
+                      </td>
+                      <td className="p-2 text-right font-medium tabular-nums">
+                        {eur(Number(r.total))}
+                        {/* Reservas de web pública: importe realmente cobrado al
+                            TPV (depósito, ya con descuentos/promos aplicados). */}
+                        {r.created_by_role === "public" && r.deposit_paid && (
+                          <div className="text-xs font-normal text-emerald-700 dark:text-emerald-300">
+                            Pagado web: {eur(Number(r.paid_amount))}
+                          </div>
+                        )}
+                      </td>
                       <td className="p-2 text-right">
-                        {r.status !== "cancelled" && r.status !== "completed" && (
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); cancel.mutate(r.id); }} title="Cancelar">
+                        {r.status !== "cancelled" && r.status !== "rejected" && r.status !== "completed" && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={(e) => { e.stopPropagation(); setCancelReason(""); setCancelTarget(r.id); }} title="Cancelar">
                             <X className="h-4 w-4" />
                           </Button>
                         )}
                       </td>
                     </tr>
-                    {extraItems?.length ? (
+                    {extraItems?.length || notes?.trim() ? (
                       <tr className="border-b last:border-0 bg-muted/10">
                         <td colSpan={7} className="px-2 pb-2 pt-0">
-                          <ReservationExtrasInfo items={extraItems} />
+                          <ReservationExtrasInfo items={extraItems} notes={notes} />
                         </td>
                       </tr>
                     ) : null}
@@ -166,6 +212,36 @@ function ReservationsPage() {
         onOpenChange={(o) => { setOpen(o); if (!o) setEditId(undefined); }}
         editReservationId={editId}
       />
+
+      <Dialog open={!!cancelTarget} onOpenChange={(o) => { if (!o) { setCancelTarget(null); setCancelReason(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancelar reserva</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cancel-reason">Motivo de la cancelación <span className="text-destructive">*</span></Label>
+            <Textarea
+              id="cancel-reason"
+              rows={3}
+              autoFocus
+              placeholder="Ej. El cliente llamó para anular, habitación con avería, no se presentó…"
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+            />
+            <p className="text-xs text-muted-foreground">Obligatorio. Quedará registrado junto a la reserva.</p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelTarget(null); setCancelReason(""); }}>Volver</Button>
+            <Button
+              variant="destructive"
+              onClick={confirmCancel}
+              disabled={!cancelReason.trim() || cancel.isPending}
+            >
+              {cancel.isPending ? "Cancelando…" : "Confirmar cancelación"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
