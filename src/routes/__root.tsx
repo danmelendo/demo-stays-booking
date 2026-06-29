@@ -3,7 +3,9 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { AuthProvider } from "@/lib/auth";
+import { BrandProvider } from "@/lib/brand";
 import { DemoBanner } from "@/components/DemoBanner";
+import { DemoGate } from "@/components/DemoGate";
 
 interface RouterContext {
   queryClient: QueryClient;
@@ -38,13 +40,16 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
-        <TooltipProvider>
-          <Outlet />
-          <DemoBanner />
-          <Toaster richColors position="top-right" />
-        </TooltipProvider>
+        <BrandProvider>
+          <TooltipProvider>
+            <DemoGate>
+              <Outlet />
+              <DemoBanner />
+            </DemoGate>
+            <Toaster richColors position="top-right" />
+          </TooltipProvider>
+        </BrandProvider>
       </AuthProvider>
     </QueryClientProvider>
   );
 }
-

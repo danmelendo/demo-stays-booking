@@ -27,6 +27,9 @@ import {
   BarChart3,
   Wand2,
   Globe,
+  BookOpenCheck,
+  Smartphone,
+  MonitorSmartphone,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useRoles } from "@/lib/roles";
@@ -36,6 +39,7 @@ const items = [
   { to: "/calendar", label: "Calendario", icon: CalendarDays },
   { to: "/reservations", label: "Reservas", icon: ClipboardList },
   { to: "/customers", label: "Clientes", icon: Users },
+  { to: "/journal", label: "Booking journal", icon: BookOpenCheck },
   { to: "/reports", label: "Informes", icon: BarChart3 },
 ] as const;
 
@@ -112,6 +116,22 @@ export function AppSidebar() {
                     <a href="/reservar" target="_blank" rel="noreferrer" className="flex items-center gap-2">
                       <Globe className="h-4 w-4" />
                       <span>Web pública</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="App móvil Stays">
+                    <a href="/stays" target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                      <Smartphone className="h-4 w-4" />
+                      <span>App móvil Stays</span>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton asChild tooltip="Web pública Stays">
+                    <a href="/web" target="_blank" rel="noreferrer" className="flex items-center gap-2">
+                      <MonitorSmartphone className="h-4 w-4" />
+                      <span>Web pública Stays</span>
                     </a>
                   </SidebarMenuButton>
                 </SidebarMenuItem>

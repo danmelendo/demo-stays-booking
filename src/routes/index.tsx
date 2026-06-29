@@ -8,5 +8,5 @@ export const Route = createFileRoute("/")({
 function Index() {
   const { session, loading } = useAuth();
   if (loading) return <div className="flex min-h-screen items-center justify-center text-muted-foreground">Cargando…</div>;
-  return <Navigate to={session ? "/today" : "/login"} />;
+  return <Navigate to={session ? "/today" : "/web"} />;
 }

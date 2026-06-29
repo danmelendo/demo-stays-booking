@@ -225,5 +225,34 @@ diferencia entre un webhook hecho bien y uno que confía en la redirección del 
 
 ---
 
+## 10. App móvil de cliente y conector PMS (integración con cualquier PMS)
+
+Sobre el mismo backend vive una **segunda aplicación**: «Stays» (`/stays`), un producto de cliente
+**white-label** que demuestra cómo el mismo equipo puede ofrecer una capa de fidelización + reservas
+que se **integra con cualquier PMS por API**. Demo Stays actúa aquí como **PMS de prueba**.
+
+**El contrato de integración** ([`src/integrations/pms/`](src/integrations/pms/)) es la pieza clave:
+
+- `connector.ts` — la interfaz `PmsConnector`: discovery, disponibilidad, prereservas/reservas,
+  fidelización, firma y journal. **Es el único contrato** que la app móvil conoce.
+- `types.ts` — DTOs de dominio desacoplados de la forma de fila del PMS (la app nunca ve una fila).
+- `demo-stays-connector.ts` — implementación de referencia **sobre el mock existente** + el motor de
+  precios real (`calculateNightlyPrice`). Marshala fila↔DTO y escribe el **booking journal**.
+- `index.ts` — el singleton `pms`. Integrar otro PMS = implementar `PmsConnector` y cambiarlo aquí;
+  la UI no se toca.
+
+**Modelo de dominio añadido** (mismo patrón seed/mock): `provinces`, `properties` (con `property_id`
+en `rooms`) para Discovery multi-provincia; `loyalty_tiers/_accounts/_transactions` y `rewards` para
+el club; `signatures` para la firma digital; `members` para la identidad de cliente (separada del
+auth de staff); y `booking_journal`, traza append-only del ciclo de vida compartida por el conector y
+el panel (`/journal`).
+
+**Reutilización deliberada:** las prereservas son reservas `pending` con `is_prebooking`/`hold_expires_at`,
+de modo que el **trigger anti-solapamiento** (sección 6) las bloquea sin duplicar lógica; confirmar
+una prereserva reusa el camino de pago `create-redsys-payment` y acredita puntos según el nivel del
+socio. La firma es un `<canvas>` propio (pointer events, sin dependencias) que produce un data URL.
+
+---
+
 *Versión saneada para portfolio. El backend (esquema, migraciones y Edge Functions) no se
 incluye para no exponer datos del cliente; la demo lo sustituye por el mock descrito arriba.*

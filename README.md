@@ -76,7 +76,38 @@ Datos y cambios se guardan en tu navegador; usa **«Reiniciar datos»** del avis
   franja sólo aplica al portal público.
 - Roles (administrador / recepción) con control de acceso.
 - Catálogo de extras y tarifas editable.
+- **Booking journal** (`/journal`): traza inmutable del ciclo de vida de cada reserva
+  (prereserva → confirmación → firma → check-in → puntos), compartida con la app móvil.
 - Notificaciones en tiempo real al entrar nuevas reservas.
+
+**App móvil de cliente «Stays»** (`/stays`)
+
+Producto **white-label independiente** que se integra con **cualquier PMS por API** y, en esta
+demo, está conectado a Demo Stays como **PMS de prueba**. Toda la app consume el PMS a través de
+un **conector tipado** (`src/integrations/pms/`, interfaz `PmsConnector`): para integrar otro PMS
+basta con implementar esa interfaz y cambiar el singleton — ni una pantalla cambia.
+
+- **Discovery por provincias:** propiedades en Madrid, Barcelona, Valencia, Sevilla, Málaga y
+  Bilbao, con búsqueda de disponibilidad y precios por noche.
+- **Reservas y prereservas:** una *prereserva* bloquea la habitación 30 min sin pagar (con cuenta
+  atrás) y se confirma pagando la señal; reutiliza el motor anti-solapamiento del PMS.
+- **Firma digital:** contrato de check-in firmado en un canvas (sin dependencias), almacenado y
+  registrado en el journal.
+- **Club de fidelización:** niveles (Bronce→Platino), puntos por estancia, progreso de nivel,
+  catálogo de recompensas canjeables y movimientos.
+- **Avisos de disponibilidad (notificaciones push):** si una habitación está ocupada para tus
+  fechas, «Avísame cuando se libere» registra un *watch*; cuando se libera, la app dispara una
+  **notificación del navegador** (vía service worker) y un aviso in-app. En producción lo
+  empujaría el PMS por webhook + Web Push/VAPID; aquí el conector reevalúa disponibilidad.
+- **Comunidad:** los activos son **pisos, habitaciones y habitaciones compartidas** en
+  **urbanizaciones (comunidades)**. La pestaña *Comunidad* muestra los **eventos de cada comunidad**
+  servidos por un **CMS** (`src/integrations/cms/`, interfaz `CmsClient` — swappeable por un CMS
+  headless real), con RSVP («apuntarme»).
+
+**Web pública «Stays»** (`/web`) — sitio de marketing y descubrimiento alineado con la app
+(responsive, sin login): landing, navegación de comunidades, ficha de comunidad (activos por tipo +
+eventos) y la sección **Comunidad** (agenda de eventos). Consume el mismo conector PMS y el CMS, y
+enlaza a la app para reservar/apuntarse.
 
 ## 🧱 Stack técnico
 

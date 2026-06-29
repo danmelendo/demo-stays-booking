@@ -63,6 +63,9 @@
 
 :root {
   --radius: 0.625rem;
+  /* Active brand accent (overridden at runtime by BrandProvider). Defaults to
+     the flex-living brand so server-rendered / first paint already has it. */
+  --brand: #556B2F;
   --background: oklch(1 0 0);
   --foreground: oklch(0.129 0.042 264.695);
   --card: oklch(1 0 0);
